@@ -38,7 +38,7 @@ export default function ProductsPage() {
 
   useEffect(() => {
     fetchProducts()
-  }, [search, category, sortBy])
+  }, [search, category, sortBy]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchProducts = async () => {
     setLoading(true)
@@ -50,7 +50,7 @@ export default function ProductsPage() {
 
       const response = await fetch(`/api/products?${params.toString()}`)
       if (response.ok) {
-        let productsData = await response.json()
+        const productsData = await response.json()
         
         // Sort products based on selection
         switch (sortBy) {

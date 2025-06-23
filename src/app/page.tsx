@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Store, Package, MapPin, Star } from 'lucide-react'
+import { Store, Package, MapPin } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 import Image from 'next/image'
 

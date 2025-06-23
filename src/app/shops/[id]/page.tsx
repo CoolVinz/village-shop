@@ -141,7 +141,7 @@ export default async function ShopPage({ params }: ShopPageProps) {
                   No products available
                 </h3>
                 <p className="text-gray-600">
-                  This shop doesn't have any products available right now.
+                  This shop doesn&apos;t have any products available right now.
                   Check back later!
                 </p>
               </CardContent>

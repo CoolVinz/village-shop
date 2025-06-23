@@ -26,7 +26,15 @@ const productSchema = z.object({
   isAvailable: z.boolean().default(true),
 })
 
-type ProductFormData = z.infer<typeof productSchema>
+type ProductFormData = {
+  name: string
+  description?: string
+  price: number
+  stock: number
+  category?: string
+  shopId: string
+  isAvailable: boolean
+}
 
 interface Shop {
   id: string
@@ -48,7 +56,7 @@ export default function CreateProductPage() {
     formState: { errors },
     watch,
     setValue,
-  } = useForm<ProductFormData>({
+  } = useForm({
     resolver: zodResolver(productSchema),
     defaultValues: {
       isAvailable: true,

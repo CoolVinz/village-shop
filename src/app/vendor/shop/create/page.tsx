@@ -22,7 +22,12 @@ const shopSchema = z.object({
   isActive: z.boolean().default(true),
 })
 
-type ShopFormData = z.infer<typeof shopSchema>
+type ShopFormData = {
+  name: string
+  description?: string
+  houseNumber: string
+  isActive: boolean
+}
 
 export default function CreateShopPage() {
   const router = useRouter()
@@ -37,7 +42,7 @@ export default function CreateShopPage() {
     formState: { errors },
     watch,
     setValue,
-  } = useForm<ShopFormData>({
+  } = useForm({
     resolver: zodResolver(shopSchema),
     defaultValues: {
       isActive: true,

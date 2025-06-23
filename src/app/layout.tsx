@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { SessionProvider } from 'next-auth/react'
-import { Toaster } from 'sonner'
+import { Providers } from '@/components/providers'
 import { Navigation } from '@/components/ui/navigation'
 import "./globals.css";
 
@@ -30,11 +29,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <SessionProvider>
+        <Providers>
           <Navigation />
           <main>{children}</main>
-          <Toaster />
-        </SessionProvider>
+        </Providers>
       </body>
     </html>
   );

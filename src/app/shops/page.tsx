@@ -4,10 +4,9 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Store, Search, MapPin, Package, Filter } from 'lucide-react'
+import { Store, Search, MapPin, Filter } from 'lucide-react'
 import Image from 'next/image'
 
 interface Shop {
@@ -37,7 +36,7 @@ export default function ShopsPage() {
 
   useEffect(() => {
     fetchShops()
-  }, [search, sortBy])
+  }, [search, sortBy]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchShops = async () => {
     setLoading(true)
