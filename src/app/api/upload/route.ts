@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+
+// AUTHENTICATION COMPLETELY DISABLED FOR DEVELOPMENT
 // import { getServerSession } from 'next-auth'
 // import { authOptions } from '@/lib/auth'
 
