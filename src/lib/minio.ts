@@ -1,15 +1,36 @@
 import { Client } from 'minio'
 
-// Initialize MinIO client with your self-hosted configuration
-export const minioClient = new Client({
-  endPoint: process.env.MINIO_ENDPOINT!,
-  port: parseInt(process.env.MINIO_PORT || '443'),
-  useSSL: process.env.MINIO_USE_SSL === 'true',
-  accessKey: process.env.MINIO_ACCESS_KEY!,
-  secretKey: process.env.MINIO_SECRET_KEY!,
-})
-
 export const BUCKET_NAME = process.env.MINIO_BUCKET_NAME || 'villager-shop'
+
+// Lazy-load MinIO client to avoid build-time environment variable issues
+let minioClientInstance: Client | null = null
+
+export function getMinioClient(): Client {
+  if (!minioClientInstance) {
+    // Validate required environment variables
+    const requiredVars = {
+      MINIO_ENDPOINT: process.env.MINIO_ENDPOINT,
+      MINIO_ACCESS_KEY: process.env.MINIO_ACCESS_KEY,
+      MINIO_SECRET_KEY: process.env.MINIO_SECRET_KEY,
+    }
+
+    for (const [key, value] of Object.entries(requiredVars)) {
+      if (!value) {
+        throw new Error(`Missing required environment variable: ${key}`)
+      }
+    }
+
+    minioClientInstance = new Client({
+      endPoint: process.env.MINIO_ENDPOINT!,
+      port: parseInt(process.env.MINIO_PORT || '443'),
+      useSSL: process.env.MINIO_USE_SSL === 'true',
+      accessKey: process.env.MINIO_ACCESS_KEY!,
+      secretKey: process.env.MINIO_SECRET_KEY!,
+    })
+  }
+
+  return minioClientInstance
+}
 
 // Bucket organization for multi-vendor marketplace
 export const BUCKET_FOLDERS = {
@@ -22,6 +43,7 @@ export const BUCKET_FOLDERS = {
 // Initialize bucket and ensure it exists
 export async function initializeBucket() {
   try {
+    const minioClient = getMinioClient()
     const bucketExists = await minioClient.bucketExists(BUCKET_NAME)
     if (!bucketExists) {
       await minioClient.makeBucket(BUCKET_NAME, 'us-east-1')
@@ -50,6 +72,7 @@ export async function uploadFile(
   contentType: string = 'application/octet-stream'
 ): Promise<string> {
   try {
+    const minioClient = getMinioClient()
     await minioClient.putObject(BUCKET_NAME, fileName, file, file.length, {
       'Content-Type': contentType,
     })
@@ -65,6 +88,7 @@ export async function uploadFile(
 // Delete file from MinIO
 export async function deleteFile(fileName: string): Promise<void> {
   try {
+    const minioClient = getMinioClient()
     await minioClient.removeObject(BUCKET_NAME, fileName)
     console.log(`✅ Deleted file: ${fileName}`)
   } catch (error) {
@@ -79,6 +103,7 @@ export async function getPresignedUrl(
   expiry: number = 7 * 24 * 60 * 60 // 7 days
 ): Promise<string> {
   try {
+    const minioClient = getMinioClient()
     return await minioClient.presignedGetObject(BUCKET_NAME, fileName, expiry)
   } catch (error) {
     console.error('❌ Error generating presigned URL:', error)

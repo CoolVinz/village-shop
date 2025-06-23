@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { imageUpload } from '@/lib/image-upload'
-import { initializeBucket } from '@/lib/minio'
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,6 +9,22 @@ export async function POST(request: NextRequest) {
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Check if MinIO is configured
+    const requiredVars = ['MINIO_ENDPOINT', 'MINIO_ACCESS_KEY', 'MINIO_SECRET_KEY']
+    const missingVars = requiredVars.filter(varName => !process.env[varName])
+    
+    if (missingVars.length > 0) {
+      console.error('MinIO not configured. Missing environment variables:', missingVars)
+      return NextResponse.json(
+        { error: 'File storage not configured' },
+        { status: 503 }
+      )
+    }
+
+    // Lazy load MinIO-dependent modules only when needed
+    const { imageUpload } = await import('@/lib/image-upload')
+    const { initializeBucket } = await import('@/lib/minio')
 
     // Initialize MinIO bucket if needed
     await initializeBucket()
@@ -55,6 +69,15 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Upload error:', error)
+    
+    // Handle MinIO configuration errors specifically
+    if (error instanceof Error && error.message.includes('Missing required environment variable')) {
+      return NextResponse.json(
+        { error: 'File storage not configured properly' },
+        { status: 503 }
+      )
+    }
+    
     return NextResponse.json(
       { error: 'Upload failed' },
       { status: 500 }
