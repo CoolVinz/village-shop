@@ -6,24 +6,28 @@ Add these environment variables to your Coolify deployment:
 
 ```bash
 # Database
-DATABASE_URL="postgres://postgres:F2pMZ2HO1IASnnMCuMqjEoFjGC75R1wcpaUf5OIIX174C4Xev6BhArClvuJJ12kH@82.180.137.92:5437/postgres"
+DATABASE_URL="YOUR_POSTGRES_CONNECTION_STRING"
 
 # MinIO Configuration
-MINIO_ENDPOINT="minio-shop.aivinz.xyz"
+MINIO_ENDPOINT="YOUR_MINIO_ENDPOINT"
 MINIO_PORT=443
 MINIO_USE_SSL=true
-MINIO_ACCESS_KEY="bp4DAfIGFUR2Osgh"
-MINIO_SECRET_KEY="l7CHKsi0WLaaecME74ijMVHFYdG0pEOc"
+MINIO_ACCESS_KEY="YOUR_MINIO_ACCESS_KEY"
+MINIO_SECRET_KEY="YOUR_MINIO_SECRET_KEY"
 MINIO_BUCKET_NAME="villager-shop"
 
 # NextAuth Configuration (required even when disabled)
 NEXTAUTH_URL="https://line-shop.aivinz.xyz"
-NEXTAUTH_SECRET="prod-secret-key-for-disabled-auth-2024-secure-random-string"
+NEXTAUTH_SECRET="YOUR_SECURE_RANDOM_STRING"
 
 # LINE Login Configuration (leave empty for now)
 LINE_CLIENT_ID=""
 LINE_CLIENT_SECRET=""
 ```
+
+## ⚠️ SECURITY NOTE
+**NEVER commit actual credentials to version control!**
+Replace the placeholder values above with your actual credentials only in your deployment environment.
 
 ## Deployment Steps
 
