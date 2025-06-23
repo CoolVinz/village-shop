@@ -13,41 +13,80 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Example models - customize these based on your villager-shop needs
+// Multi-vendor marketplace models for village shop
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  orders    Order[]
+  id           String    @id @default(cuid())
+  name         String
+  houseNumber  String    @unique
+  lineId       String?   @unique
+  phone        String?
+  address      String?
+  role         UserRole  @default(CUSTOMER)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  
+  // Relations
+  shops        Shop[]    @relation("ShopOwner")
+  orders       Order[]   @relation("CustomerOrders")
 
   @@map("users")
 }
 
-model Product {
-  id          String   @id @default(cuid())
+model Shop {
+  id          String    @id @default(cuid())
   name        String
   description String?
-  price       Decimal  @db.Decimal(10, 2)
-  imageUrl    String?
-  stock       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  logoUrl     String?
+  houseNumber String
+  isActive    Boolean   @default(true)
+  ownerId     String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  owner       User      @relation("ShopOwner", fields: [ownerId], references: [id])
+  products    Product[]
+  orderItems  OrderItem[]
+
+  @@map("shops")
+}
+
+model Product {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  price       Decimal   @db.Decimal(10, 2)
+  imageUrls   String[]  @default([])
+  stock       Int       @default(0)
+  category    String?
+  isAvailable Boolean   @default(true)
+  shopId      String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  shop        Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
   orderItems  OrderItem[]
 
   @@map("products")
 }
 
 model Order {
-  id         String      @id @default(cuid())
-  userId     String
-  total      Decimal     @db.Decimal(10, 2)
-  status     OrderStatus @default(PENDING)
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
-  user       User        @relation(fields: [userId], references: [id])
-  orderItems OrderItem[]
+  id                 String       @id @default(cuid())
+  customerId         String
+  customerHouseNumber String
+  deliveryTime       DateTime?
+  totalAmount        Decimal      @db.Decimal(10, 2)
+  status             OrderStatus  @default(PENDING)
+  notes              String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  
+  // Relations
+  customer           User         @relation("CustomerOrders", fields: [customerId], references: [id])
+  orderItems         OrderItem[]
+  paymentSlips       PaymentSlip[]
 
   @@map("orders")
 }
@@ -56,18 +95,72 @@ model OrderItem {
   id        String  @id @default(cuid())
   orderId   String
   productId String
+  shopId    String
   quantity  Int
   price     Decimal @db.Decimal(10, 2)
-  order     Order   @relation(fields: [orderId], references: [id])
+  status    OrderItemStatus @default(PENDING)
+  
+  // Relations
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product   Product @relation(fields: [productId], references: [id])
+  shop      Shop    @relation(fields: [shopId], references: [id])
 
   @@map("order_items")
 }
 
+model PaymentSlip {
+  id        String           @id @default(cuid())
+  orderId   String
+  imageUrl  String
+  status    PaymentStatus    @default(PENDING)
+  notes     String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  
+  // Relations
+  order     Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("payment_slips")
+}
+
+model ProductCategory {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  iconUrl     String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("product_categories")
+}
+
+enum UserRole {
+  CUSTOMER
+  VENDOR
+  ADMIN
+}
+
 enum OrderStatus {
   PENDING
-  PROCESSING
-  SHIPPED
+  CONFIRMED
+  PREPARING
+  READY_FOR_DELIVERY
   DELIVERED
   CANCELLED
+}
+
+enum OrderItemStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  READY
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
 }

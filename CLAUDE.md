@@ -15,11 +15,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture Overview
 
-This is a Next.js 15 project with TypeScript using the App Router architecture. The project uses:
+This is a **Multi-Vendor Village Marketplace** built with Next.js 15 and TypeScript using the App Router architecture. The project uses:
 
 - **UI Framework**: Shadcn/ui components built on Radix UI primitives
-- **Styling**: Tailwind CSS with CSS variables for theming
+- **Styling**: Tailwind CSS v3 with CSS variables for theming
 - **Database**: PostgreSQL with Prisma ORM for type-safe database operations
+- **Authentication**: NextAuth.js with LINE Login integration (for Thai/Asian markets)
+- **File Storage**: MinIO self-hosted S3-compatible storage for images
+- **Image Processing**: Sharp for optimization and resizing
 - **Form Handling**: React Hook Form with Zod validation
 - **State Management**: React hooks and context (no external state management library)
 - **Icons**: Lucide React icons
@@ -35,6 +38,9 @@ src/
 ├── hooks/           # Custom React hooks (mobile detection, etc.)
 └── lib/             # Utilities and configurations
     ├── prisma.ts    # Prisma client singleton
+    ├── auth.ts      # NextAuth configuration with LINE Login
+    ├── minio.ts     # MinIO client and file operations
+    ├── image-upload.ts # Image processing and upload utilities
     └── utils.ts     # Utility functions (cn for class merging)
 ```
 
@@ -52,30 +58,131 @@ Requires PostgreSQL environment variables:
 
 Current connection: `postgres://postgres:F2pMZ2HO1IASnnMCuMqjEoFjGC75R1wcpaUf5OIIX174C4Xev6BhArClvuJJ12kH@82.180.137.92:5437/postgres`
 
-## Database Schema
+## Multi-Vendor Database Schema
 
-The project includes example models in `prisma/schema.prisma`:
-- **User**: Basic user management with email and orders
-- **Product**: E-commerce products with pricing and inventory
-- **Order**: Order management with status tracking
-- **OrderItem**: Individual items within orders
+The project implements a complete multi-vendor marketplace schema in `prisma/schema.prisma`:
+
+### **Core Models:**
+- **User**: Village residents with house numbers, LINE ID, and roles (CUSTOMER, VENDOR, ADMIN)
+- **Shop**: Individual vendor shops with owner relationship
+- **Product**: Products belonging to specific shops with multiple images
+- **Order**: Customer orders with delivery time booking
+- **OrderItem**: Items from multiple vendors in a single order
+- **PaymentSlip**: Payment verification through uploaded receipts
+- **ProductCategory**: Organization system for products
+
+### **User Roles:**
+- **CUSTOMER**: Village residents who shop
+- **VENDOR**: Shop owners who sell products  
+- **ADMIN**: Platform administrators
+
+### **Key Features:**
+- House number-based user identification for village delivery
+- Multi-vendor cart and order splitting
+- Image upload for products, shop logos, and payment slips
+- Delivery time booking system
+- Role-based access control
+
+## MinIO Configuration
+
+Self-hosted MinIO storage at `minio-shop.aivinz.xyz`:
+
+### **Environment Variables:**
+```env
+MINIO_ENDPOINT="minio-shop.aivinz.xyz"
+MINIO_PORT=443
+MINIO_USE_SSL=true
+MINIO_ACCESS_KEY="bp4DAfIGFUR2Osgh"
+MINIO_SECRET_KEY="l7CHKsi0WLaaecME74ijMVHFYdG0pEOc"
+MINIO_BUCKET_NAME="villager-shop"
+```
+
+### **Bucket Organization:**
+- `shops/logos/` - Shop logo images
+- `products/` - Product catalog images
+- `payment-slips/` - Payment receipt uploads
+- `users/` - User avatar images
+
+### **Image Upload API:**
+```typescript
+// Upload endpoint: POST /api/upload
+// Supports types: 'product', 'shop-logo', 'payment-slip', 'user-avatar'
+
+const formData = new FormData()
+formData.append('file', file)
+formData.append('type', 'product')
+
+const response = await fetch('/api/upload', {
+  method: 'POST',
+  body: formData,
+})
+```
+
+## Authentication System
+
+Uses NextAuth.js with LINE Login for Thai/Asian market integration:
+
+### **Configuration:**
+- LINE Login OAuth provider (credentials to be configured)
+- House number collection during registration
+- Role-based access control
+- Session management with JWT
+
+### **Usage:**
+```typescript
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+
+const session = await getServerSession(authOptions)
+// session.user includes: id, name, houseNumber, role, lineId
+```
 
 ## Database Operations
 
 Always run `npm run db:generate` after modifying `prisma/schema.prisma` to update TypeScript types.
 
-Example usage:
+### **Example Usage:**
 ```typescript
 import { prisma } from '@/lib/prisma'
 
-// Create a user
-const user = await prisma.user.create({
-  data: { email: 'user@example.com', name: 'John Doe' }
+// Create a vendor user
+const vendor = await prisma.user.create({
+  data: { 
+    name: 'Shop Owner',
+    houseNumber: '123/4',
+    role: 'VENDOR',
+    lineId: 'U1234567890'
+  }
 })
 
-// Find products with relations
-const products = await prisma.product.findMany({
-  include: { orderItems: true }
+// Create a shop
+const shop = await prisma.shop.create({
+  data: {
+    name: 'Village Grocery',
+    description: 'Fresh local products',
+    ownerId: vendor.id,
+    houseNumber: '123/4'
+  }
+})
+
+// Multi-vendor order with delivery time
+const order = await prisma.order.create({
+  data: {
+    customerId: customerId,
+    customerHouseNumber: '456/7',
+    deliveryTime: new Date('2024-01-15T14:00:00'),
+    totalAmount: 150.00,
+    orderItems: {
+      create: [
+        {
+          productId: product1.id,
+          shopId: shop1.id,
+          quantity: 2,
+          price: 50.00
+        }
+      ]
+    }
+  }
 })
 ```
 
