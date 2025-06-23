@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { CheckCircle, Package, Store, Calendar, Phone, User, Home } from 'lucide-react'
+import { PaymentSlipUpload } from '@/components/payment/payment-slip-upload'
 import { prisma } from '@/lib/prisma'
 import { formatCurrency } from '@/lib/utils'
 import Image from 'next/image'
@@ -48,6 +49,11 @@ async function getOrder(id: string) {
               }
             }
           }
+        }
+      },
+      paymentSlips: {
+        orderBy: {
+          createdAt: 'desc'
         }
       }
     }
@@ -285,6 +291,75 @@ export default async function OrderPage({ params }: OrderPageProps) {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Payment Section */}
+            {order.status === 'PENDING' || order.status === 'CONFIRMED' ? (
+              <div className="space-y-4">
+                {order.paymentSlips.length === 0 ? (
+                  <PaymentSlipUpload orderId={order.id} />
+                ) : (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                        Payment Submitted
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {order.paymentSlips.map((slip) => (
+                          <div key={slip.id} className="border rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <Badge 
+                                variant="outline" 
+                                className={
+                                  slip.status === 'VERIFIED' 
+                                    ? 'bg-green-100 text-green-800 border-green-300'
+                                    : slip.status === 'REJECTED'
+                                    ? 'bg-red-100 text-red-800 border-red-300'
+                                    : 'bg-yellow-100 text-yellow-800 border-yellow-300'
+                                }
+                              >
+                                {slip.status}
+                              </Badge>
+                              <span className="text-sm text-gray-600">
+                                {new Date(slip.createdAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                            {slip.notes && (
+                              <p className="text-sm text-gray-600 mb-2">{slip.notes}</p>
+                            )}
+                            <Image
+                              src={slip.imageUrl}
+                              alt="Payment slip"
+                              width={400}
+                              height={128}
+                              className="w-full max-h-32 object-contain rounded border"
+                            />
+                          </div>
+                        ))}
+                        <p className="text-sm text-gray-600">
+                          Your payment is being reviewed. You will be notified once it&apos;s verified.
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="text-center py-6">
+                  <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-2" />
+                  <p className="font-medium">Order {order.status.toLowerCase().replace('_', ' ')}</p>
+                  <p className="text-sm text-gray-600">
+                    {order.status === 'DELIVERED' 
+                      ? 'Thank you for your order!'
+                      : 'Your order is being processed'
+                    }
+                  </p>
+                </CardContent>
+              </Card>
+            )}
 
             <div className="space-y-3">
               <Link href="/products">
