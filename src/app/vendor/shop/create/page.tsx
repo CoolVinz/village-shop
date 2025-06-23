@@ -122,7 +122,9 @@ export default function CreateShopPage() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to create shop')
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        console.error('Shop creation failed:', response.status, errorData)
+        throw new Error(errorData.error || `HTTP ${response.status}`)
       }
 
       const shop = await response.json()
@@ -130,7 +132,8 @@ export default function CreateShopPage() {
       router.push(`/vendor/shop/${shop.id}`)
     } catch (error) {
       console.error('Error creating shop:', error)
-      toast.error('Failed to create shop')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create shop'
+      toast.error(`Failed to create shop: ${errorMessage}`)
     } finally {
       setIsLoading(false)
     }
