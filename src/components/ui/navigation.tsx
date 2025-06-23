@@ -6,29 +6,20 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { 
   ShoppingCart, 
-  User, 
   Menu, 
-  X,
-  LogIn,
-  Settings
+  X
 } from 'lucide-react'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { useSession, signIn, signOut } from 'next-auth/react'
+// import { useSession, signIn, signOut } from 'next-auth/react'
 
 export function Navigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const { data: session } = useSession()
+  // Authentication disabled for development
 
   const navigation = [
     { name: 'Home', href: '/' },
     { name: 'Shops', href: '/shops' },
     { name: 'Products', href: '/products' },
+    { name: 'Vendor Dashboard', href: '/vendor' }, // Added for easy access during development
   ]
 
   return (
@@ -55,7 +46,7 @@ export function Navigation() {
             </div>
           </div>
 
-          {/* Right side - Cart, User */}
+          {/* Right side - Cart, Development Note */}
           <div className="hidden sm:ml-6 sm:flex sm:items-center sm:space-x-4">
             {/* Shopping Cart */}
             <Button variant="ghost" size="sm" className="relative">
@@ -68,53 +59,10 @@ export function Navigation() {
               </Badge>
             </Button>
 
-            {/* User Menu */}
-            {session ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm">
-                    <User className="h-5 w-5 mr-2" />
-                    {session.user.name}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem asChild>
-                    <Link href="/orders">My Orders</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/profile">Profile</Link>
-                  </DropdownMenuItem>
-                  {(session.user.role === 'VENDOR' || session.user.role === 'ADMIN') && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link href="/vendor">
-                          <Settings className="mr-2 h-4 w-4" />
-                          Vendor Dashboard
-                        </Link>
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                  {session.user.role === 'ADMIN' && (
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin">
-                        <Settings className="mr-2 h-4 w-4" />
-                        Admin Dashboard
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => signOut()}>
-                    Sign Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <Button variant="ghost" size="sm" onClick={() => signIn()}>
-                <LogIn className="h-5 w-5 mr-2" />
-                Sign In
-              </Button>
-            )}
+            {/* Development Mode Indicator */}
+            <div className="text-sm text-gray-500">
+              Dev Mode (No Auth)
+            </div>
           </div>
 
           {/* Mobile menu button */}
@@ -157,64 +105,9 @@ export function Navigation() {
               </Button>
             </div>
             <div className="mt-3 space-y-1">
-              {session ? (
-                <>
-                  <div className="px-4 py-2 text-sm font-medium text-gray-900">
-                    {session.user.name}
-                  </div>
-                  <Link
-                    href="/orders"
-                    className="block px-4 py-2 text-sm text-gray-500 hover:text-gray-900"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    My Orders
-                  </Link>
-                  <Link
-                    href="/profile"
-                    className="block px-4 py-2 text-sm text-gray-500 hover:text-gray-900"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Profile
-                  </Link>
-                  {(session.user.role === 'VENDOR' || session.user.role === 'ADMIN') && (
-                    <Link
-                      href="/vendor"
-                      className="block px-4 py-2 text-sm text-gray-500 hover:text-gray-900"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      Vendor Dashboard
-                    </Link>
-                  )}
-                  {session.user.role === 'ADMIN' && (
-                    <Link
-                      href="/admin"
-                      className="block px-4 py-2 text-sm text-gray-500 hover:text-gray-900"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      Admin Dashboard
-                    </Link>
-                  )}
-                  <button
-                    onClick={() => {
-                      signOut()
-                      setIsMobileMenuOpen(false)
-                    }}
-                    className="block w-full text-left px-4 py-2 text-sm text-gray-500 hover:text-gray-900"
-                  >
-                    Sign Out
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={() => {
-                    signIn()
-                    setIsMobileMenuOpen(false)
-                  }}
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-500 hover:text-gray-900"
-                >
-                  Sign In
-                </button>
-              )}
+              <div className="px-4 py-2 text-sm font-medium text-gray-900">
+                Development Mode (No Auth)
+              </div>
             </div>
           </div>
         </div>

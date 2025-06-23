@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+// import { getServerSession } from 'next-auth'
+// import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
@@ -14,14 +14,22 @@ const createShopSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    // TEMPORARILY DISABLED AUTHENTICATION FOR DEVELOPMENT
+    // const session = await getServerSession(authOptions)
+    // if (!session) {
+    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // }
+    // if (session.user.role !== 'VENDOR' && session.user.role !== 'ADMIN') {
+    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    // }
 
-    if (session.user.role !== 'VENDOR' && session.user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    // Mock session for development
+    const session = {
+      user: {
+        id: 'dev-user-1',
+        name: 'Development User',
+        role: 'VENDOR'
+      }
     }
 
     const body = await request.json()
@@ -86,13 +94,17 @@ export async function GET(request: NextRequest) {
     if (ownerId) {
       // Handle "current" ownerId for authenticated user
       if (ownerId === 'current') {
-        const session = await getServerSession(authOptions)
-        if (!session) {
-          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-        }
+        // TEMPORARILY DISABLED AUTHENTICATION FOR DEVELOPMENT
+        // const session = await getServerSession(authOptions)
+        // if (!session) {
+        //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        // }
+        
+        // Mock session for development
+        const mockUserId = 'dev-user-1'
         
         shops = await prisma.shop.findMany({
-          where: { ownerId: session.user.id },
+          where: { ownerId: mockUserId },
           include: {
             owner: {
               select: {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+// import { getServerSession } from 'next-auth'
+// import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
@@ -17,14 +17,22 @@ const createProductSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    // TEMPORARILY DISABLED AUTHENTICATION FOR DEVELOPMENT
+    // const session = await getServerSession(authOptions)
+    // if (!session) {
+    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // }
+    // if (session.user.role !== 'VENDOR' && session.user.role !== 'ADMIN') {
+    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    // }
 
-    if (session.user.role !== 'VENDOR' && session.user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    // Mock session for development
+    const session = {
+      user: {
+        id: 'dev-user-1',
+        name: 'Development User',
+        role: 'VENDOR'
+      }
     }
 
     const body = await request.json()
