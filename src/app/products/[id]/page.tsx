@@ -3,7 +3,8 @@ import { notFound } from 'next/navigation'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Store, MapPin, Package, ShoppingCart } from 'lucide-react'
+import { ArrowLeft, Store, MapPin, Package } from 'lucide-react'
+import { AddToCartButton } from '@/components/product/add-to-cart-button'
 import { prisma } from '@/lib/prisma'
 import Image from 'next/image'
 
@@ -175,23 +176,17 @@ export default async function ProductPage({ params }: ProductPageProps) {
             </Card>
 
             {/* Order Actions */}
-            <div className="space-y-3">
-              {isInStock ? (
-                <>
-                  <Button size="lg" className="w-full">
-                    <ShoppingCart className="h-5 w-5 mr-2" />
-                    Add to Cart
-                  </Button>
-                  <Button size="lg" variant="outline" className="w-full">
-                    Order Now
-                  </Button>
-                </>
-              ) : (
-                <Button size="lg" disabled className="w-full">
-                  Out of Stock
-                </Button>
-              )}
-            </div>
+            <AddToCartButton product={{
+              id: product.id,
+              name: product.name,
+              price: product.price.toNumber(),
+              stock: product.stock,
+              imageUrls: product.imageUrls,
+              shop: {
+                id: product.shop.id,
+                name: product.shop.name
+              }
+            }} />
 
             {/* Product Stats */}
             <div className="bg-gray-50 rounded-lg p-4">

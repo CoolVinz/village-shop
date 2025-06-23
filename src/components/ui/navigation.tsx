@@ -3,9 +3,8 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { CartSidebar } from '@/components/cart/cart-sidebar'
 import { 
-  ShoppingCart, 
   Menu, 
   X
 } from 'lucide-react'
@@ -49,15 +48,7 @@ export function Navigation() {
           {/* Right side - Cart, Development Note */}
           <div className="hidden sm:ml-6 sm:flex sm:items-center sm:space-x-4">
             {/* Shopping Cart */}
-            <Button variant="ghost" size="sm" className="relative">
-              <ShoppingCart className="h-5 w-5" />
-              <Badge 
-                variant="destructive" 
-                className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center text-xs"
-              >
-                0
-              </Badge>
-            </Button>
+            <CartSidebar />
 
             {/* Development Mode Indicator */}
             <div className="text-sm text-gray-500">
@@ -98,11 +89,8 @@ export function Navigation() {
             ))}
           </div>
           <div className="pt-4 pb-3 border-t border-gray-200">
-            <div className="flex items-center px-4 space-y-3">
-              <Button variant="ghost" size="sm" className="w-full justify-start">
-                <ShoppingCart className="h-5 w-5 mr-2" />
-                Cart (0)
-              </Button>
+            <div className="flex items-center px-4">
+              <CartSidebar />
             </div>
             <div className="mt-3 space-y-1">
               <div className="px-4 py-2 text-sm font-medium text-gray-900">
