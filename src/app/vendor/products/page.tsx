@@ -1,6 +1,6 @@
-import { getServerSession } from 'next-auth'
+// import { getServerSession } from 'next-auth'
 import Link from 'next/link'
-import { authOptions } from '@/lib/auth'
+// import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -41,13 +41,15 @@ async function getVendorProducts(userId: string) {
 }
 
 export default async function VendorProductsPage() {
-  const session = await getServerSession(authOptions)
-  
-  if (!session) {
-    return <div>Please sign in</div>
-  }
+  // TEMPORARILY DISABLED AUTHENTICATION FOR DEVELOPMENT
+  // const session = await getServerSession(authOptions)
+  // if (!session) {
+  //   return <div>Please sign in</div>
+  // }
 
-  const products = await getVendorProducts(session.user.id)
+  // Use mock user ID for development
+  const mockUserId = 'dev-user-1'
+  const products = await getVendorProducts(mockUserId)
 
   return (
     <div className="space-y-6">
