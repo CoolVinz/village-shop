@@ -67,7 +67,7 @@ export const authOptions: NextAuthOptions = {
       authorization: {
         url: 'https://access.line.me/oauth2/v2.1/authorize',
         params: {
-          scope: 'profile openid',
+          scope: 'profile',
           response_type: 'code',
         },
       },
