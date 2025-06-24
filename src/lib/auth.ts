@@ -39,14 +39,29 @@ declare module 'next-auth/jwt' {
   }
 }
 
+// Validate required environment variables
+const requiredEnvVars = {
+  LINE_CLIENT_ID: process.env.LINE_CLIENT_ID,
+  LINE_CLIENT_SECRET: process.env.LINE_CLIENT_SECRET,
+  NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
+  NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+}
+
+// Log missing environment variables
+Object.entries(requiredEnvVars).forEach(([key, value]) => {
+  if (!value) {
+    console.warn(`⚠️ Missing environment variable: ${key}`)
+  }
+})
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
-    // LINE Login provider
-    {
+    // LINE Login provider - only add if credentials are available
+    ...(process.env.LINE_CLIENT_ID && process.env.LINE_CLIENT_SECRET ? [{
       id: 'line',
       name: 'LINE',
-      type: 'oauth',
+      type: 'oauth' as const,
       clientId: process.env.LINE_CLIENT_ID,
       clientSecret: process.env.LINE_CLIENT_SECRET,
       authorization: {
@@ -58,7 +73,8 @@ export const authOptions: NextAuthOptions = {
       },
       token: 'https://api.line.me/oauth2/v2.1/token',
       userinfo: 'https://api.line.me/v2/profile',
-      profile(profile) {
+      profile(profile: { userId: string; displayName: string; email?: string; pictureUrl?: string }) {
+        console.log('LINE profile:', profile) // Debug log
         return {
           id: profile.userId,
           name: profile.displayName,
@@ -69,7 +85,7 @@ export const authOptions: NextAuthOptions = {
           role: UserRole.CUSTOMER,
         }
       },
-    },
+    }] : []),
   ],
   callbacks: {
     async jwt({ token, user }) {
