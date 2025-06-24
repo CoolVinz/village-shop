@@ -1,6 +1,6 @@
 'use client'
 
-import { signOut, useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -14,16 +14,15 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Bell, LogOut, Settings, User } from 'lucide-react'
 
 export function VendorHeader() {
-  const { data: session } = useSession()
+  const { user, logout } = useAuth()
   
-  if (!session?.user) return null
+  if (!user) return null
   
-  const user = session.user
   const initials = user.name
-    .split(' ')
+    ?.split(' ')
     .map(n => n[0])
     .join('')
-    .toUpperCase()
+    .toUpperCase() || 'U'
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4">
@@ -74,7 +73,7 @@ export function VendorHeader() {
                 <span>Settings</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => signOut()}>
+              <DropdownMenuItem onClick={() => logout()}>
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
               </DropdownMenuItem>

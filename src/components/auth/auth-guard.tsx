@@ -1,6 +1,6 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { UserRole } from '@prisma/client'
@@ -15,31 +15,31 @@ interface AuthGuardProps {
 export function AuthGuard({ 
   children, 
   requiredRoles = [], 
-  redirectTo = '/auth/signin' 
+  redirectTo = '/auth/login' 
 }: AuthGuardProps) {
-  const { data: session, status } = useSession()
+  const { user, loading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (status === 'loading') return // Still loading
+    if (loading) return // Still loading
 
-    if (status === 'unauthenticated') {
-      // Not signed in, redirect to signin page
+    if (!user) {
+      // Not signed in, redirect to login page
       router.push(`${redirectTo}?callbackUrl=${encodeURIComponent(window.location.pathname)}`)
       return
     }
 
-    if (session && requiredRoles.length > 0) {
+    if (user && requiredRoles.length > 0) {
       // Check if user has required role
-      if (!requiredRoles.includes(session.user.role as UserRole)) {
+      if (!requiredRoles.includes(user.role as UserRole)) {
         // User doesn't have required role, redirect to unauthorized page
         router.push('/?error=unauthorized')
         return
       }
     }
-  }, [session, status, router, requiredRoles, redirectTo])
+  }, [user, loading, router, requiredRoles, redirectTo])
 
-  if (status === 'loading') {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -50,18 +50,18 @@ export function AuthGuard({
     )
   }
 
-  if (status === 'unauthenticated') {
+  if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-600">Redirecting to sign in...</p>
+          <p className="text-gray-600">Redirecting to login...</p>
         </div>
       </div>
     )
   }
 
-  if (session && requiredRoles.length > 0) {
-    if (!requiredRoles.includes(session.user.role as UserRole)) {
+  if (user && requiredRoles.length > 0) {
+    if (!requiredRoles.includes(user.role as UserRole)) {
       return (
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">

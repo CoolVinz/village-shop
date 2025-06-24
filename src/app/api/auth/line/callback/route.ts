@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const code = searchParams.get('code')
-    const state = searchParams.get('state') // TODO: Validate state parameter for security
+    // const state = searchParams.get('state') // TODO: Validate state parameter for security
 
     if (!code) {
       console.error('No authorization code received from LINE')

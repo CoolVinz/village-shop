@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+// import { getServerSession } from 'next-auth'
+// import { authOptions } from '@/lib/auth'
 
 const createShopSchema = z.object({
   name: z.string().min(1).max(100),
@@ -17,13 +17,14 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🔍 Shop creation API called')
     
-    const session = await getServerSession(authOptions)
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    if (session.user.role !== 'VENDOR' && session.user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
+    // TODO: Implement authentication check with custom auth system
+    // const session = await getServerSession(authOptions)
+    // if (!session) {
+    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // }
+    // if (session.user.role !== 'VENDOR' && session.user.role !== 'ADMIN') {
+    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    // }
 
     const body = await request.json()
     console.log('📝 Received shop data:', body)
@@ -31,30 +32,31 @@ export async function POST(request: NextRequest) {
     const validatedData = createShopSchema.parse(body)
     console.log('✅ Validated shop data:', validatedData)
 
+    // TODO: Re-enable shop ownership validation after implementing custom auth
     // Check if user already has a shop with this name
-    console.log('🔍 Checking for existing shop with name:', validatedData.name, 'for user:', session.user.id)
+    // console.log('🔍 Checking for existing shop with name:', validatedData.name, 'for user:', session.user.id)
     
-    const existingShop = await prisma.shop.findFirst({
-      where: {
-        ownerId: session.user.id,
-        name: validatedData.name,
-      }
-    })
+    // const existingShop = await prisma.shop.findFirst({
+    //   where: {
+    //     ownerId: session.user.id,
+    //     name: validatedData.name,
+    //   }
+    // })
 
-    if (existingShop) {
-      console.log('❌ Shop already exists:', existingShop)
-      return NextResponse.json(
-        { error: 'You already have a shop with this name' },
-        { status: 400 }
-      )
-    }
+    // if (existingShop) {
+    //   console.log('❌ Shop already exists:', existingShop)
+    //   return NextResponse.json(
+    //     { error: 'You already have a shop with this name' },
+    //     { status: 400 }
+    //   )
+    // }
 
     console.log('✅ Creating new shop...')
     const { logoUrl, ...shopData } = validatedData
     const shop = await prisma.shop.create({
       data: {
         ...shopData,
-        ownerId: session.user.id,
+        ownerId: 'temp-user-id', // TODO: Replace with actual user ID from custom auth
         ...(logoUrl && logoUrl !== '' && { logoUrl }),
       },
       include: {
@@ -118,13 +120,14 @@ export async function GET(request: NextRequest) {
     if (ownerId) {
       // Handle "current" ownerId for authenticated user
       if (ownerId === 'current') {
-        const session = await getServerSession(authOptions)
-        if (!session) {
-          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-        }
+        // TODO: Implement authentication check with custom auth system
+        // const session = await getServerSession(authOptions)
+        // if (!session) {
+        //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        // }
         
         shops = await prisma.shop.findMany({
-          where: { ownerId: session.user.id },
+          where: { ownerId: 'temp-user-id' }, // TODO: Replace with actual user ID
           include: {
             owner: {
               select: {

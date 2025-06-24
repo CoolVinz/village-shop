@@ -210,11 +210,12 @@ export async function createUser(userData: {
     return {
       id: user.id,
       name: user.name,
-      username: user.username,
-      houseNumber: user.houseNumber,
+      username: user.username || undefined,
+      houseNumber: user.houseNumber || undefined,
       role: user.role,
       phone: user.phone || undefined,
       address: user.address || undefined,
+      profileComplete: user.profileComplete,
     }
   } catch (error) {
     console.error('User creation error:', error)

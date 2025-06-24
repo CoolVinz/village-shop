@@ -13,14 +13,14 @@ import {
 } from 'lucide-react'
 import { AuthGuard } from '@/components/auth/auth-guard'
 import { UserRole } from '@prisma/client'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const { data: session } = useSession()
+  const { user } = useAuth()
 
   const navigation = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
@@ -62,14 +62,14 @@ export default function AdminLayout({
               </div>
               
               <div className="flex items-center space-x-4">
-                {session && (
+                {user && (
                   <>
                     <div className="text-sm">
                       <span className="text-gray-300">Welcome, </span>
-                      <span className="font-medium">{session.user.name}</span>
+                      <span className="font-medium">{user.name}</span>
                     </div>
                     <div className="text-xs bg-blue-600 px-2 py-1 rounded">
-                      {session.user.role}
+                      {user.role}
                     </div>
                   </>
                 )}

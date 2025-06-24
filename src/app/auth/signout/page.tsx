@@ -1,41 +1,35 @@
 'use client'
 
-import { signOut, getSession } from 'next-auth/react'
-import { Session } from 'next-auth'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Loader2, LogOut } from 'lucide-react'
 
 export default function SignOutPage() {
   const [isLoading, setIsLoading] = useState(false)
-  const [session, setSession] = useState<Session | null>(null)
+  const { user, logout } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    getSession().then((session) => {
-      setSession(session)
-      if (!session) {
-        router.push('/')
-      }
-    })
-  }, [router])
+    if (!user) {
+      router.push('/')
+    }
+  }, [user, router])
 
   const handleSignOut = async () => {
     setIsLoading(true)
     try {
-      await signOut({ 
-        callbackUrl: '/',
-        redirect: true 
-      })
+      await logout()
+      router.push('/')
     } catch (error) {
       console.error('Sign out error:', error)
       setIsLoading(false)
     }
   }
 
-  if (!session) {
+  if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -66,8 +60,8 @@ export default function SignOutPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-center text-sm text-gray-600 p-4 bg-gray-50 rounded">
-              <p>Signed in as: <strong>{session?.user?.name}</strong></p>
-              <p>Role: <strong>{session?.user?.role}</strong></p>
+              <p>Signed in as: <strong>{user?.name}</strong></p>
+              <p>Role: <strong>{user?.role}</strong></p>
             </div>
 
             <div className="flex space-x-3">

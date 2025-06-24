@@ -25,7 +25,7 @@ interface OrderItemCardProps {
       customer: {
         id: string
         name: string
-        houseNumber: string
+        houseNumber: string | null
         phone?: string | null
       }
     }
@@ -163,7 +163,7 @@ export default function OrderItemCard({ orderItem }: OrderItemCardProps) {
               <div>
                 <p className="font-medium">Customer: {orderItem.order.customer.name}</p>
                 <p className="text-muted-foreground">
-                  House #{orderItem.order.customer.houseNumber}
+                  House #{orderItem.order.customer.houseNumber || 'N/A'}
                 </p>
                 {orderItem.order.customer.phone && (
                   <p className="text-muted-foreground">

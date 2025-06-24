@@ -12,28 +12,29 @@ import {
   User,
   Shield
 } from 'lucide-react'
-import { useSession, signOut } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 
 export function Navigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const { data: session, status } = useSession()
+  const { user, logout } = useAuth()
 
   const navigation = [
     { name: 'Home', href: '/' },
     { name: 'Shops', href: '/shops' },
     { name: 'Products', href: '/products' },
-    ...(session?.user?.role === 'VENDOR' || session?.user?.role === 'ADMIN' 
+    ...(user?.role === 'VENDOR' || user?.role === 'ADMIN' 
       ? [{ name: 'Vendor Dashboard', href: '/vendor' }] 
       : []
     ),
-    ...(session?.user?.role === 'ADMIN' 
+    ...(user?.role === 'ADMIN' 
       ? [{ name: 'Admin Panel', href: '/admin' }] 
       : []
     ),
   ]
 
-  const handleSignOut = () => {
-    signOut({ callbackUrl: '/' })
+  const handleSignOut = async () => {
+    await logout()
+    // Router push will be handled by the useAuth hook
   }
 
   return (
@@ -66,12 +67,8 @@ export function Navigation() {
             <CartSidebar />
 
             {/* Authentication Section */}
-            {status === 'loading' && (
-              <div className="text-sm text-gray-500">Loading...</div>
-            )}
-            
-            {status === 'unauthenticated' && (
-              <Link href="/auth/signin">
+            {!user && (
+              <Link href="/auth/login">
                 <Button variant="outline" size="sm">
                   <LogIn className="h-4 w-4 mr-2" />
                   Sign In
@@ -79,16 +76,16 @@ export function Navigation() {
               </Link>
             )}
 
-            {status === 'authenticated' && session && (
+            {user && (
               <div className="flex items-center space-x-3">
                 {/* User Info */}
                 <div className="flex items-center space-x-2">
                   <User className="h-4 w-4 text-gray-600" />
                   <div className="text-sm">
-                    <div className="font-medium text-gray-900">{session.user.name}</div>
+                    <div className="font-medium text-gray-900">{user.name}</div>
                     <div className="text-gray-500 flex items-center">
-                      {session.user.role === 'ADMIN' && <Shield className="h-3 w-3 mr-1" />}
-                      {session.user.role}
+                      {user.role === 'ADMIN' && <Shield className="h-3 w-3 mr-1" />}
+                      {user.role}
                     </div>
                   </div>
                 </div>
@@ -139,8 +136,8 @@ export function Navigation() {
               <CartSidebar />
               
               {/* Mobile Authentication */}
-              {status === 'unauthenticated' && (
-                <Link href="/auth/signin" onClick={() => setIsMobileMenuOpen(false)}>
+              {!user && (
+                <Link href="/auth/login" onClick={() => setIsMobileMenuOpen(false)}>
                   <Button variant="outline" size="sm">
                     <LogIn className="h-4 w-4 mr-2" />
                     Sign In
@@ -149,15 +146,15 @@ export function Navigation() {
               )}
             </div>
             
-            {status === 'authenticated' && session && (
+            {user && (
               <div className="mt-3 px-4">
                 <div className="flex items-center space-x-2 pb-3">
                   <User className="h-4 w-4 text-gray-600" />
                   <div className="text-sm">
-                    <div className="font-medium text-gray-900">{session.user.name}</div>
+                    <div className="font-medium text-gray-900">{user.name}</div>
                     <div className="text-gray-500 flex items-center">
-                      {session.user.role === 'ADMIN' && <Shield className="h-3 w-3 mr-1" />}
-                      {session.user.role}
+                      {user.role === 'ADMIN' && <Shield className="h-3 w-3 mr-1" />}
+                      {user.role}
                     </div>
                   </div>
                 </div>
