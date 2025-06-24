@@ -15,21 +15,29 @@ datasource db {
 
 // Multi-vendor marketplace models for village shop
 model User {
-  id          String    @id @default(cuid())
-  name        String
-  username    String    @unique
-  password    String
-  houseNumber String    @unique
-  phone       String?
-  address     String?
-  role        UserRole  @default(CUSTOMER)
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  name            String
+  username        String?   @unique  // Optional, will be house number when set
+  password        String?   // Optional for LINE users
+  houseNumber     String?   @unique  // Collected during profile completion
+  phone           String?
+  address         String?
+  role            UserRole  @default(CUSTOMER)
+  isActive        Boolean   @default(true)
+  
+  // LINE Login fields
+  lineId          String?   @unique  // LINE user ID
+  email           String?   @unique  // From LINE or manual entry
+  image           String?   // LINE profile picture
+  emailVerified   DateTime? // For future email verification
+  profileComplete Boolean   @default(false) // Whether user completed profile setup
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
   
   // Relations
-  shops       Shop[]    @relation("ShopOwner")
-  orders      Order[]   @relation("CustomerOrders")
+  shops           Shop[]    @relation("ShopOwner")
+  orders          Order[]   @relation("CustomerOrders")
 
   @@map("users")
 }

@@ -7,11 +7,15 @@ import jwt from 'jsonwebtoken'
 export interface SessionUser {
   id: string
   name: string
-  username: string
-  houseNumber: string
+  username?: string
+  houseNumber?: string
   role: UserRole
   phone?: string
   address?: string
+  lineId?: string
+  email?: string
+  image?: string
+  profileComplete: boolean
 }
 
 // JWT payload type
@@ -80,14 +84,100 @@ export async function authenticateUser(username: string, password: string): Prom
     return {
       id: user.id,
       name: user.name,
-      username: user.username,
-      houseNumber: user.houseNumber,
+      username: user.username || undefined,
+      houseNumber: user.houseNumber || undefined,
       role: user.role,
       phone: user.phone || undefined,
       address: user.address || undefined,
+      lineId: user.lineId || undefined,
+      email: user.email || undefined,
+      image: user.image || undefined,
+      profileComplete: user.profileComplete,
     }
   } catch (error) {
     console.error('Authentication error:', error)
+    return null
+  }
+}
+
+// LINE OAuth helper functions
+export interface LineProfile {
+  userId: string
+  displayName: string
+  pictureUrl?: string
+  statusMessage?: string
+}
+
+export async function getLineProfile(accessToken: string): Promise<LineProfile | null> {
+  try {
+    const response = await fetch('https://api.line.me/v2/profile', {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    })
+
+    if (!response.ok) {
+      return null
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.error('LINE profile fetch error:', error)
+    return null
+  }
+}
+
+export async function findOrCreateLineUser(lineProfile: LineProfile): Promise<SessionUser | null> {
+  try {
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { lineId: lineProfile.userId }
+    })
+
+    if (existingUser) {
+      return {
+        id: existingUser.id,
+        name: existingUser.name,
+        username: existingUser.username || undefined,
+        houseNumber: existingUser.houseNumber || undefined,
+        role: existingUser.role,
+        phone: existingUser.phone || undefined,
+        address: existingUser.address || undefined,
+        lineId: existingUser.lineId || undefined,
+        email: existingUser.email || undefined,
+        image: existingUser.image || undefined,
+        profileComplete: existingUser.profileComplete,
+      }
+    }
+
+    // Create new user with LINE profile
+    const newUser = await prisma.user.create({
+      data: {
+        name: lineProfile.displayName,
+        lineId: lineProfile.userId,
+        image: lineProfile.pictureUrl,
+        email: `${lineProfile.userId}@line.me`,
+        role: UserRole.CUSTOMER,
+        profileComplete: false, // User needs to complete profile
+        isActive: true,
+      },
+    })
+
+    return {
+      id: newUser.id,
+      name: newUser.name,
+      username: newUser.username || undefined,
+      houseNumber: newUser.houseNumber || undefined,
+      role: newUser.role,
+      phone: newUser.phone || undefined,
+      address: newUser.address || undefined,
+      lineId: newUser.lineId || undefined,
+      email: newUser.email || undefined,
+      image: newUser.image || undefined,
+      profileComplete: newUser.profileComplete,
+    }
+  } catch (error) {
+    console.error('LINE user creation error:', error)
     return null
   }
 }
