@@ -10,7 +10,6 @@ import {
   Store,
   ShoppingBag,
   Edit,
-  Trash2,
   MoreHorizontal
 } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
@@ -101,7 +100,7 @@ function getRoleIcon(role: string) {
 function StatCard({ title, value, icon: Icon, description, color = "text-blue-600" }: {
   title: string
   value: string | number
-  icon: any
+  icon: React.ComponentType<{ className?: string }>
   description?: string
   color?: string
 }) {

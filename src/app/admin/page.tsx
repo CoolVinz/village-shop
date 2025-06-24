@@ -8,7 +8,6 @@ import {
   DollarSign,
   TrendingUp,
   AlertCircle,
-  Clock,
   CheckCircle
 } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
@@ -114,7 +113,7 @@ async function getRecentActivity() {
 function StatCard({ title, value, icon: Icon, description, badge }: {
   title: string
   value: string | number
-  icon: any
+  icon: React.ComponentType<{ className?: string }>
   description?: string
   badge?: { text: string; variant: 'default' | 'destructive' | 'secondary' }
 }) {
