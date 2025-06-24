@@ -73,6 +73,9 @@ export const authOptions: NextAuthOptions = {
       },
       token: 'https://api.line.me/oauth2/v2.1/token',
       userinfo: 'https://api.line.me/v2/profile',
+      // LINE Login uses HS256 instead of RS256 for JWT
+      idToken: false,
+      checks: ['state'],
       profile(profile: { userId: string; displayName: string; email?: string; pictureUrl?: string }) {
         console.log('🔍 LINE profile received:', JSON.stringify(profile, null, 2))
         const userProfile = {
