@@ -33,6 +33,9 @@ declare module 'next-auth/jwt' {
     id: string
     houseNumber: string
     role: UserRole
+    lineId?: string
+    phone?: string
+    address?: string
   }
 }
 
@@ -80,9 +83,9 @@ export const authOptions: NextAuthOptions = {
           token.id = dbUser.id
           token.houseNumber = dbUser.houseNumber
           token.role = dbUser.role
-          token.lineId = dbUser.lineId
-          token.phone = dbUser.phone
-          token.address = dbUser.address
+          token.lineId = dbUser.lineId || undefined
+          token.phone = dbUser.phone || undefined
+          token.address = dbUser.address || undefined
         }
       }
       return token

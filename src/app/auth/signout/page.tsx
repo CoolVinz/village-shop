@@ -1,6 +1,7 @@
 'use client'
 
 import { signOut, getSession } from 'next-auth/react'
+import { Session } from 'next-auth'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -9,7 +10,7 @@ import { Loader2, LogOut } from 'lucide-react'
 
 export default function SignOutPage() {
   const [isLoading, setIsLoading] = useState(false)
-  const [session, setSession] = useState(null)
+  const [session, setSession] = useState<Session | null>(null)
   const router = useRouter()
 
   useEffect(() => {

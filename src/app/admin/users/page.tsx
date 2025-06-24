@@ -24,7 +24,18 @@ async function getUsersData() {
           select: {
             id: true,
             name: true,
-            isActive: true
+            isActive: true,
+            orderItems: {
+              select: {
+                id: true,
+                order: {
+                  select: {
+                    totalAmount: true,
+                    status: true
+                  }
+                }
+              }
+            }
           }
         },
         orders: {
@@ -32,17 +43,6 @@ async function getUsersData() {
             id: true,
             totalAmount: true,
             status: true
-          }
-        },
-        vendorOrderItems: {
-          select: {
-            id: true,
-            order: {
-              select: {
-                totalAmount: true,
-                status: true
-              }
-            }
           }
         }
       }
@@ -205,7 +205,9 @@ async function UsersPageContent() {
                   const totalOrders = user.role === 'CUSTOMER' ? user.orders.length : 0
                   const totalRevenue = user.role === 'CUSTOMER' 
                     ? user.orders.reduce((sum, order) => sum + Number(order.totalAmount), 0)
-                    : user.vendorOrderItems.reduce((sum, item) => sum + Number(item.order.totalAmount), 0)
+                    : user.shops.reduce((shopSum, shop) => 
+                        shopSum + shop.orderItems.reduce((itemSum, item) => 
+                          itemSum + Number(item.order.totalAmount), 0), 0)
                   const activeShops = user.shops.filter(shop => shop.isActive).length
 
                   return (
@@ -265,7 +267,7 @@ async function UsersPageContent() {
                           )}
                           {user.role === 'VENDOR' && (
                             <>
-                              <div>{user.vendorOrderItems.length} sales</div>
+                              <div>{user.shops.reduce((sum, shop) => sum + shop.orderItems.length, 0)} sales</div>
                               <div className="text-gray-600">
                                 {formatCurrency(totalRevenue)} revenue
                               </div>
