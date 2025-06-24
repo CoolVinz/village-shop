@@ -6,20 +6,35 @@ import { Button } from '@/components/ui/button'
 import { CartSidebar } from '@/components/cart/cart-sidebar'
 import { 
   Menu, 
-  X
+  X,
+  LogIn,
+  LogOut,
+  User,
+  Shield
 } from 'lucide-react'
-// import { useSession, signIn, signOut } from 'next-auth/react'
+import { useSession, signOut } from 'next-auth/react'
 
 export function Navigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  // Authentication disabled for development
+  const { data: session, status } = useSession()
 
   const navigation = [
     { name: 'Home', href: '/' },
     { name: 'Shops', href: '/shops' },
     { name: 'Products', href: '/products' },
-    { name: 'Vendor Dashboard', href: '/vendor' }, // Added for easy access during development
+    ...(session?.user?.role === 'VENDOR' || session?.user?.role === 'ADMIN' 
+      ? [{ name: 'Vendor Dashboard', href: '/vendor' }] 
+      : []
+    ),
+    ...(session?.user?.role === 'ADMIN' 
+      ? [{ name: 'Admin Panel', href: '/admin' }] 
+      : []
+    ),
   ]
+
+  const handleSignOut = () => {
+    signOut({ callbackUrl: '/' })
+  }
 
   return (
     <nav className="bg-white shadow-sm border-b">
@@ -45,15 +60,46 @@ export function Navigation() {
             </div>
           </div>
 
-          {/* Right side - Cart, Development Note */}
+          {/* Right side - Cart, Authentication */}
           <div className="hidden sm:ml-6 sm:flex sm:items-center sm:space-x-4">
             {/* Shopping Cart */}
             <CartSidebar />
 
-            {/* Development Mode Indicator */}
-            <div className="text-sm text-gray-500">
-              Dev Mode (No Auth)
-            </div>
+            {/* Authentication Section */}
+            {status === 'loading' && (
+              <div className="text-sm text-gray-500">Loading...</div>
+            )}
+            
+            {status === 'unauthenticated' && (
+              <Link href="/auth/signin">
+                <Button variant="outline" size="sm">
+                  <LogIn className="h-4 w-4 mr-2" />
+                  Sign In
+                </Button>
+              </Link>
+            )}
+
+            {status === 'authenticated' && session && (
+              <div className="flex items-center space-x-3">
+                {/* User Info */}
+                <div className="flex items-center space-x-2">
+                  <User className="h-4 w-4 text-gray-600" />
+                  <div className="text-sm">
+                    <div className="font-medium text-gray-900">{session.user.name}</div>
+                    <div className="text-gray-500 flex items-center">
+                      {session.user.role === 'ADMIN' && <Shield className="h-3 w-3 mr-1" />}
+                      {session.user.role}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sign Out */}
+                <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -89,14 +135,46 @@ export function Navigation() {
             ))}
           </div>
           <div className="pt-4 pb-3 border-t border-gray-200">
-            <div className="flex items-center px-4">
+            <div className="flex items-center px-4 space-x-3">
               <CartSidebar />
+              
+              {/* Mobile Authentication */}
+              {status === 'unauthenticated' && (
+                <Link href="/auth/signin" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Button variant="outline" size="sm">
+                    <LogIn className="h-4 w-4 mr-2" />
+                    Sign In
+                  </Button>
+                </Link>
+              )}
             </div>
-            <div className="mt-3 space-y-1">
-              <div className="px-4 py-2 text-sm font-medium text-gray-900">
-                Development Mode (No Auth)
+            
+            {status === 'authenticated' && session && (
+              <div className="mt-3 px-4">
+                <div className="flex items-center space-x-2 pb-3">
+                  <User className="h-4 w-4 text-gray-600" />
+                  <div className="text-sm">
+                    <div className="font-medium text-gray-900">{session.user.name}</div>
+                    <div className="text-gray-500 flex items-center">
+                      {session.user.role === 'ADMIN' && <Shield className="h-3 w-3 mr-1" />}
+                      {session.user.role}
+                    </div>
+                  </div>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    setIsMobileMenuOpen(false)
+                    handleSignOut()
+                  }}
+                  className="w-full justify-start"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </Button>
               </div>
-            </div>
+            )}
           </div>
         </div>
       )}

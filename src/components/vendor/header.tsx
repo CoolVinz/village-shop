@@ -1,6 +1,6 @@
 'use client'
 
-import { signOut } from 'next-auth/react'
+import { signOut, useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -13,16 +13,12 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Bell, LogOut, Settings, User } from 'lucide-react'
 
-interface VendorHeaderProps {
-  user: {
-    id: string
-    name: string
-    houseNumber: string
-    role: string
-  }
-}
-
-export function VendorHeader({ user }: VendorHeaderProps) {
+export function VendorHeader() {
+  const { data: session } = useSession()
+  
+  if (!session?.user) return null
+  
+  const user = session.user
   const initials = user.name
     .split(' ')
     .map(n => n[0])
