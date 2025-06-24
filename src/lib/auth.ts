@@ -1,63 +1,29 @@
-import { NextAuthOptions } from 'next-auth'
-import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import { prisma, connectWithRetry } from './prisma'
 import { UserRole } from '@prisma/client'
+import bcrypt from 'bcryptjs'
+import jwt from 'jsonwebtoken'
 
-// Extend NextAuth types for our custom user model
-declare module 'next-auth' {
-  interface Session {
-    user: {
-      id: string
-      name: string
-      houseNumber: string
-      role: UserRole
-      lineId?: string
-      phone?: string
-      address?: string
-    }
-  }
-
-  interface User {
-    id: string
-    name: string
-    houseNumber: string
-    role: UserRole
-    lineId?: string
-    phone?: string
-    address?: string
-  }
+// Custom session user type
+export interface SessionUser {
+  id: string
+  name: string
+  username: string
+  houseNumber: string
+  role: UserRole
+  phone?: string
+  address?: string
 }
 
-declare module 'next-auth/jwt' {
-  interface JWT {
-    id: string
-    houseNumber: string
-    role: UserRole
-    lineId?: string
-    phone?: string
-    address?: string
-  }
+// JWT payload type
+export interface JWTPayload extends SessionUser {
+  iat: number
+  exp: number
 }
 
-// Validate required environment variables
-const requiredEnvVars = {
-  LINE_CLIENT_ID: process.env.LINE_CLIENT_ID,
-  LINE_CLIENT_SECRET: process.env.LINE_CLIENT_SECRET,
-  NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
-  NEXTAUTH_URL: process.env.NEXTAUTH_URL,
-}
-
-// Log missing environment variables
-Object.entries(requiredEnvVars).forEach(([key, value]) => {
-  if (!value) {
-    console.warn(`⚠️ Missing environment variable: ${key}`)
-  }
-})
-
-// Validate Prisma client and test connection
-if (!prisma) {
-  console.error('🚨 Prisma client is not initialized!')
-  throw new Error('Database connection failed - Prisma client not available')
+// Environment validation
+const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secure-jwt-secret-key'
+if (!process.env.JWT_SECRET) {
+  console.warn('⚠️ JWT_SECRET not set, using default (not secure for production)')
 }
 
 // Test database connection during initialization
@@ -69,162 +35,101 @@ async function testDatabaseConnection() {
     })
   } catch (error) {
     console.error('🚨 Database connection failed during auth initialization:', error)
-    // Don't throw here to allow fallback authentication methods
   }
 }
 
 // Initialize database connection test (non-blocking)
 testDatabaseConnection()
 
-export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
-  providers: [
-    // LINE Login provider - only add if credentials are available
-    ...(process.env.LINE_CLIENT_ID && process.env.LINE_CLIENT_SECRET ? [{
-      id: 'line',
-      name: 'LINE',
-      type: 'oauth' as const,
-      clientId: process.env.LINE_CLIENT_ID,
-      clientSecret: process.env.LINE_CLIENT_SECRET,
-      authorization: {
-        url: 'https://access.line.me/oauth2/v2.1/authorize',
-        params: {
-          scope: 'profile',
-          response_type: 'code',
-        },
-      },
-      token: 'https://api.line.me/oauth2/v2.1/token',
-      userinfo: 'https://api.line.me/v2/profile',
-      // Remove idToken to prevent OIDC callback conflict
-      checks: ["state" as const],
-      profile(profile: { userId: string; displayName: string; email?: string; pictureUrl?: string }) {
-        console.log('🔍 LINE profile received:', JSON.stringify(profile, null, 2))
-        const userProfile = {
-          id: profile.userId,
-          name: profile.displayName,
-          email: profile.email || `${profile.userId}@line.me`,
-          image: profile.pictureUrl,
-          lineId: profile.userId,
-          houseNumber: '', // Will be collected during registration
-          role: UserRole.CUSTOMER,
-        }
-        console.log('🔍 Transformed user profile:', JSON.stringify(userProfile, null, 2))
-        return userProfile
-      },
-    }] : []),
-  ],
-  callbacks: {
-    async jwt({ token, user }) {
-      console.log('🔍 JWT callback - user:', user ? JSON.stringify(user, null, 2) : 'null')
-      
-      if (user) {
-        try {
-          console.log('🔍 Fetching user from database with ID:', user.id)
-          // For new logins, fetch user data from database
-          const dbUser = await connectWithRetry(async () => {
-            return await prisma.user.findUnique({
-              where: { id: user.id }
-            })
-          })
-          
-          console.log('🔍 Database user found:', dbUser ? 'YES' : 'NO')
-          if (dbUser) {
-            console.log('🔍 Database user details:', JSON.stringify(dbUser, null, 2))
-            token.id = dbUser.id
-            token.houseNumber = dbUser.houseNumber
-            token.role = dbUser.role
-            token.lineId = dbUser.lineId || undefined
-            token.phone = dbUser.phone || undefined
-            token.address = dbUser.address || undefined
-          }
-        } catch (error) {
-          console.error('🚨 JWT callback database error:', error)
-        }
-      }
-      return token
-    },
-    async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id
-        session.user.houseNumber = token.houseNumber
-        session.user.role = token.role
-        session.user.lineId = token.lineId
-        session.user.phone = token.phone
-        session.user.address = token.address
-      }
-      return session
-    },
-    async signIn({ user, account }) {
-      console.log('🔍 SignIn callback - provider:', account?.provider)
-      console.log('🔍 SignIn callback - user:', user ? JSON.stringify(user, null, 2) : 'null')
-      
-      if (account?.provider === 'line') {
-        try {
-          console.log('🔍 Processing LINE login for lineId:', user.lineId)
-          
-          await connectWithRetry(async () => {
-            // Check if user already exists in our database
-            console.log('🔍 Checking for existing user with lineId:', user.lineId)
-            const existingUser = await prisma.user.findUnique({
-              where: { lineId: user.lineId }
-            })
+// Authentication helper functions
+export async function hashPassword(password: string): Promise<string> {
+  return await bcrypt.hash(password, 12)
+}
 
-            console.log('🔍 Existing user found:', existingUser ? 'YES' : 'NO')
-            
-            if (!existingUser) {
-              console.log('🔍 Creating new user with data:', {
-                id: user.id,
-                name: user.name || 'LINE User',
-                lineId: user.lineId,
-                houseNumber: '',
-                phone: '',
-                address: '',
-                role: UserRole.CUSTOMER,
-                isActive: true
-              })
-              
-              // Create new user for first-time LINE login
-              const newUser = await prisma.user.create({
-                data: {
-                  id: user.id,
-                  name: user.name || 'LINE User',
-                  lineId: user.lineId,
-                  houseNumber: '', // Will be collected later
-                  phone: '',
-                  address: '',
-                  role: UserRole.CUSTOMER,
-                  isActive: true
-                }
-              })
-              
-              console.log('✅ User created successfully:', JSON.stringify(newUser, null, 2))
-            } else {
-              console.log('✅ User already exists, proceeding with login')
-            }
-          })
-          
-          console.log('✅ SignIn callback completed successfully')
-          return true
-        } catch (error) {
-          console.error('🚨 SignIn callback error:', error)
-          console.error('🚨 Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2))
-          return false
-        }
-      }
-      
-      console.log('✅ SignIn callback completed for non-LINE provider')
-      return true
-    },
-  },
-  pages: {
-    signIn: '/auth/signin',
-    signOut: '/auth/signout',
-    error: '/auth/error',
-  },
-  session: {
-    strategy: 'jwt',
-  },
-  secret: process.env.NEXTAUTH_SECRET,
+export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
+  return await bcrypt.compare(password, hashedPassword)
+}
+
+export function generateToken(user: SessionUser): string {
+  return jwt.sign(user, JWT_SECRET, { expiresIn: '7d' })
+}
+
+export function verifyToken(token: string): JWTPayload | null {
+  try {
+    return jwt.verify(token, JWT_SECRET) as JWTPayload
+  } catch {
+    return null
+  }
+}
+
+export async function authenticateUser(username: string, password: string): Promise<SessionUser | null> {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { username }
+    })
+
+    if (!user || !user.password) {
+      return null
+    }
+
+    const isValidPassword = await verifyPassword(password, user.password)
+    if (!isValidPassword) {
+      return null
+    }
+
+    return {
+      id: user.id,
+      name: user.name,
+      username: user.username,
+      houseNumber: user.houseNumber,
+      role: user.role,
+      phone: user.phone || undefined,
+      address: user.address || undefined,
+    }
+  } catch (error) {
+    console.error('Authentication error:', error)
+    return null
+  }
+}
+
+export async function createUser(userData: {
+  name: string
+  username: string
+  password: string
+  houseNumber: string
+  phone?: string
+  address?: string
+  role?: UserRole
+}): Promise<SessionUser | null> {
+  try {
+    const hashedPassword = await hashPassword(userData.password)
+
+    const user = await prisma.user.create({
+      data: {
+        name: userData.name,
+        username: userData.username,
+        password: hashedPassword,
+        houseNumber: userData.houseNumber,
+        phone: userData.phone,
+        address: userData.address,
+        role: userData.role || UserRole.CUSTOMER,
+        isActive: true,
+      },
+    })
+
+    return {
+      id: user.id,
+      name: user.name,
+      username: user.username,
+      houseNumber: user.houseNumber,
+      role: user.role,
+      phone: user.phone || undefined,
+      address: user.address || undefined,
+    }
+  } catch (error) {
+    console.error('User creation error:', error)
+    return null
+  }
 }
 
 // Helper functions for role-based access control
