@@ -110,15 +110,19 @@ export default function CreateShopPage() {
       }
 
       // Create shop
+      const shopData = {
+        ...data,
+        ...(logoUrl && { logoUrl }),
+      }
+      
+      console.log('Sending shop data:', shopData)
+      
       const response = await fetch('/api/shops', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...data,
-          logoUrl,
-        }),
+        body: JSON.stringify(shopData),
       })
 
       if (!response.ok) {

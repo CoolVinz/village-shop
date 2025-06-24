@@ -39,8 +39,7 @@ declare module 'next-auth/jwt' {
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
-    // LINE Login provider - to be configured with credentials
-    /*
+    // LINE Login provider
     {
       id: 'line',
       name: 'LINE',
@@ -68,14 +67,23 @@ export const authOptions: NextAuthOptions = {
         }
       },
     },
-    */
   ],
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id
-        token.houseNumber = user.houseNumber
-        token.role = user.role
+        // For new logins, fetch user data from database
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id }
+        })
+        
+        if (dbUser) {
+          token.id = dbUser.id
+          token.houseNumber = dbUser.houseNumber
+          token.role = dbUser.role
+          token.lineId = dbUser.lineId
+          token.phone = dbUser.phone
+          token.address = dbUser.address
+        }
       }
       return token
     },
@@ -84,11 +92,41 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id
         session.user.houseNumber = token.houseNumber
         session.user.role = token.role
+        session.user.lineId = token.lineId
+        session.user.phone = token.phone
+        session.user.address = token.address
       }
       return session
     },
-    async signIn() {
-      // LINE Login signin logic will be implemented when credentials are provided
+    async signIn({ user, account, profile }) {
+      if (account?.provider === 'line') {
+        try {
+          // Check if user already exists in our database
+          const existingUser = await prisma.user.findUnique({
+            where: { lineId: user.lineId }
+          })
+
+          if (!existingUser) {
+            // Create new user for first-time LINE login
+            await prisma.user.create({
+              data: {
+                id: user.id,
+                name: user.name || 'LINE User',
+                lineId: user.lineId,
+                houseNumber: '', // Will be collected later
+                phone: '',
+                address: '',
+                role: UserRole.CUSTOMER,
+                isActive: true
+              }
+            })
+          }
+          return true
+        } catch (error) {
+          console.error('Error creating user:', error)
+          return false
+        }
+      }
       return true
     },
   },

@@ -2,15 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
-// AUTHENTICATION COMPLETELY DISABLED FOR DEVELOPMENT
-// import { getServerSession } from 'next-auth'
-// import { authOptions } from '@/lib/auth'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 const createShopSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
   houseNumber: z.string().min(1),
-  logoUrl: z.string().url().optional(),
+  logoUrl: z.union([z.string().url(), z.literal(''), z.null()]).optional(),
   isActive: z.boolean().default(true),
 })
 
@@ -18,22 +17,12 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🔍 Shop creation API called')
     
-    // TEMPORARILY DISABLED AUTHENTICATION FOR DEVELOPMENT
-    // const session = await getServerSession(authOptions)
-    // if (!session) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    // }
-    // if (session.user.role !== 'VENDOR' && session.user.role !== 'ADMIN') {
-    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    // }
-
-    // Mock session for development
-    const session = {
-      user: {
-        id: 'dev-user-1',
-        name: 'Development User',
-        role: 'VENDOR'
-      }
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    if (session.user.role !== 'VENDOR' && session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const body = await request.json()
@@ -61,10 +50,12 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('✅ Creating new shop...')
+    const { logoUrl, ...shopData } = validatedData
     const shop = await prisma.shop.create({
       data: {
-        ...validatedData,
+        ...shopData,
         ownerId: session.user.id,
+        ...(logoUrl && logoUrl !== '' && { logoUrl }),
       },
       include: {
         owner: {
@@ -127,17 +118,13 @@ export async function GET(request: NextRequest) {
     if (ownerId) {
       // Handle "current" ownerId for authenticated user
       if (ownerId === 'current') {
-        // TEMPORARILY DISABLED AUTHENTICATION FOR DEVELOPMENT
-        // const session = await getServerSession(authOptions)
-        // if (!session) {
-        //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-        // }
-        
-        // Mock session for development
-        const mockUserId = 'dev-user-1'
+        const session = await getServerSession(authOptions)
+        if (!session) {
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
         
         shops = await prisma.shop.findMany({
-          where: { ownerId: mockUserId },
+          where: { ownerId: session.user.id },
           include: {
             owner: {
               select: {

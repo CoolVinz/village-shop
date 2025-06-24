@@ -33,7 +33,7 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [category, setCategory] = useState('')
+  const [category, setCategory] = useState('all')
   const [sortBy, setSortBy] = useState('newest')
 
   useEffect(() => {
@@ -45,7 +45,7 @@ export default function ProductsPage() {
     try {
       const params = new URLSearchParams()
       if (search) params.append('search', search)
-      if (category) params.append('category', category)
+      if (category && category !== 'all') params.append('category', category)
       params.append('available', 'true')
 
       const response = await fetch(`/api/products?${params.toString()}`)
@@ -55,10 +55,10 @@ export default function ProductsPage() {
         // Sort products based on selection
         switch (sortBy) {
           case 'price-low':
-            productsData.sort((a: Product, b: Product) => a.price - b.price)
+            productsData.sort((a: Product, b: Product) => Number(a.price) - Number(b.price))
             break
           case 'price-high':
-            productsData.sort((a: Product, b: Product) => b.price - a.price)
+            productsData.sort((a: Product, b: Product) => Number(b.price) - Number(a.price))
             break
           case 'name':
             productsData.sort((a: Product, b: Product) => a.name.localeCompare(b.name))
@@ -115,7 +115,7 @@ export default function ProductsPage() {
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Categories</SelectItem>
+                <SelectItem value="all">All Categories</SelectItem>
                 {categories.map((cat) => (
                   <SelectItem key={cat} value={cat!}>
                     {cat}
@@ -142,7 +142,7 @@ export default function ProductsPage() {
               variant="outline" 
               onClick={() => {
                 setSearch('')
-                setCategory('')
+                setCategory('all')
                 setSortBy('newest')
               }}
             >
@@ -233,7 +233,7 @@ export default function ProductsPage() {
                       
                       <div className="flex items-center justify-between">
                         <span className="text-lg font-bold">
-                          ฿{product.price.toFixed(2)}
+                          ฿{Number(product.price).toFixed(2)}
                         </span>
                         {product.category && (
                           <Badge variant="outline" className="text-xs">
