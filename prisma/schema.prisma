@@ -55,25 +55,27 @@ model VerificationToken {
 
 // Multi-vendor marketplace models for village shop
 model User {
-  id           String    @id @default(cuid())
-  name         String
-  email        String?   @unique
-  houseNumber  String    @unique
-  lineId       String?   @unique
-  phone        String?
-  address      String?
-  role         UserRole  @default(CUSTOMER)
-  isActive     Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id            String    @id @default(cuid())
+  name          String
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  houseNumber   String    @unique
+  lineId        String?   @unique
+  phone         String?
+  address       String?
+  role          UserRole  @default(CUSTOMER)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
   
   // Relations
-  shops        Shop[]    @relation("ShopOwner")
-  orders       Order[]   @relation("CustomerOrders")
+  shops         Shop[]    @relation("ShopOwner")
+  orders        Order[]   @relation("CustomerOrders")
   
   // NextAuth.js relations
-  accounts     Account[]
-  sessions     Session[]
+  accounts      Account[]
+  sessions      Session[]
 
   @@map("users")
 }
