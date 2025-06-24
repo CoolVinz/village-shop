@@ -193,3 +193,7 @@ When adding new components:
 2. Follow the established pattern in `src/components/ui/`
 3. Use the `cn()` utility for conditional class merging
 4. Leverage Tailwind CSS with the configured design tokens
+
+## Commit Policy
+
+**CRITICAL**: Always commit changes immediately after completing any coding task. Never leave uncommitted changes. Use descriptive commit messages following the existing emoji-based style (🔧, 🛠️, ✨, etc.).
