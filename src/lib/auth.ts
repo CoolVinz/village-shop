@@ -74,8 +74,8 @@ export const authOptions: NextAuthOptions = {
       token: 'https://api.line.me/oauth2/v2.1/token',
       userinfo: 'https://api.line.me/v2/profile',
       profile(profile: { userId: string; displayName: string; email?: string; pictureUrl?: string }) {
-        console.log('LINE profile:', profile) // Debug log
-        return {
+        console.log('🔍 LINE profile received:', JSON.stringify(profile, null, 2))
+        const userProfile = {
           id: profile.userId,
           name: profile.displayName,
           email: profile.email || `${profile.userId}@line.me`,
@@ -84,26 +84,37 @@ export const authOptions: NextAuthOptions = {
           houseNumber: '', // Will be collected during registration
           role: UserRole.CUSTOMER,
         }
+        console.log('🔍 Transformed user profile:', JSON.stringify(userProfile, null, 2))
+        return userProfile
       },
     }] : []),
   ],
   callbacks: {
     async jwt({ token, user }) {
+      console.log('🔍 JWT callback - user:', user ? JSON.stringify(user, null, 2) : 'null')
+      
       if (user) {
-        // For new logins, fetch user data from database
-        const dbUser = await connectWithRetry(async () => {
-          return await prisma.user.findUnique({
-            where: { id: user.id }
+        try {
+          console.log('🔍 Fetching user from database with ID:', user.id)
+          // For new logins, fetch user data from database
+          const dbUser = await connectWithRetry(async () => {
+            return await prisma.user.findUnique({
+              where: { id: user.id }
+            })
           })
-        })
-        
-        if (dbUser) {
-          token.id = dbUser.id
-          token.houseNumber = dbUser.houseNumber
-          token.role = dbUser.role
-          token.lineId = dbUser.lineId || undefined
-          token.phone = dbUser.phone || undefined
-          token.address = dbUser.address || undefined
+          
+          console.log('🔍 Database user found:', dbUser ? 'YES' : 'NO')
+          if (dbUser) {
+            console.log('🔍 Database user details:', JSON.stringify(dbUser, null, 2))
+            token.id = dbUser.id
+            token.houseNumber = dbUser.houseNumber
+            token.role = dbUser.role
+            token.lineId = dbUser.lineId || undefined
+            token.phone = dbUser.phone || undefined
+            token.address = dbUser.address || undefined
+          }
+        } catch (error) {
+          console.error('🚨 JWT callback database error:', error)
         }
       }
       return token
@@ -120,17 +131,36 @@ export const authOptions: NextAuthOptions = {
       return session
     },
     async signIn({ user, account }) {
+      console.log('🔍 SignIn callback - provider:', account?.provider)
+      console.log('🔍 SignIn callback - user:', user ? JSON.stringify(user, null, 2) : 'null')
+      
       if (account?.provider === 'line') {
         try {
+          console.log('🔍 Processing LINE login for lineId:', user.lineId)
+          
           await connectWithRetry(async () => {
             // Check if user already exists in our database
+            console.log('🔍 Checking for existing user with lineId:', user.lineId)
             const existingUser = await prisma.user.findUnique({
               where: { lineId: user.lineId }
             })
 
+            console.log('🔍 Existing user found:', existingUser ? 'YES' : 'NO')
+            
             if (!existingUser) {
+              console.log('🔍 Creating new user with data:', {
+                id: user.id,
+                name: user.name || 'LINE User',
+                lineId: user.lineId,
+                houseNumber: '',
+                phone: '',
+                address: '',
+                role: UserRole.CUSTOMER,
+                isActive: true
+              })
+              
               // Create new user for first-time LINE login
-              await prisma.user.create({
+              const newUser = await prisma.user.create({
                 data: {
                   id: user.id,
                   name: user.name || 'LINE User',
@@ -142,14 +172,23 @@ export const authOptions: NextAuthOptions = {
                   isActive: true
                 }
               })
+              
+              console.log('✅ User created successfully:', JSON.stringify(newUser, null, 2))
+            } else {
+              console.log('✅ User already exists, proceeding with login')
             }
           })
+          
+          console.log('✅ SignIn callback completed successfully')
           return true
         } catch (error) {
-          console.error('Error creating user:', error)
+          console.error('🚨 SignIn callback error:', error)
+          console.error('🚨 Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2))
           return false
         }
       }
+      
+      console.log('✅ SignIn callback completed for non-LINE provider')
       return true
     },
   },
