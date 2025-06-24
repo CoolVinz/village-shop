@@ -196,4 +196,7 @@ When adding new components:
 
 ## Commit Policy
 
-**CRITICAL**: Always commit changes immediately after completing any coding task. Never leave uncommitted changes. Use descriptive commit messages following the existing emoji-based style (🔧, 🛠️, ✨, etc.).
+**CRITICAL**: Always commit AND PUSH changes immediately after completing any coding task. 
+1. **COMMIT** with descriptive emoji-based messages (🔧, 🛠️, ✨, etc.)
+2. **PUSH** to remote repository immediately after commit
+3. Never leave uncommitted or unpushed changes
