@@ -3,90 +3,94 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Store, Package, MapPin } from 'lucide-react'
-import { prisma } from '@/lib/prisma'
+import { prisma, connectWithRetry } from '@/lib/prisma'
 import Image from 'next/image'
 
 async function getFeaturedShops() {
-  return await prisma.shop.findMany({
-    where: { 
-      isActive: true,
-      products: {
-        some: {
-          isAvailable: true,
-          stock: {
-            gt: 0
+  return await connectWithRetry(async () => {
+    return await prisma.shop.findMany({
+      where: { 
+        isActive: true,
+        products: {
+          some: {
+            isAvailable: true,
+            stock: {
+              gt: 0
+            }
           }
         }
-      }
-    },
-    include: {
-      owner: {
-        select: {
-          name: true,
-          houseNumber: true,
-        }
       },
-      products: {
-        where: {
-          isAvailable: true,
-          stock: {
-            gt: 0
+      include: {
+        owner: {
+          select: {
+            name: true,
+            houseNumber: true,
           }
         },
-        take: 3,
-        orderBy: {
-          createdAt: 'desc'
-        }
-      },
-      _count: {
-        select: {
-          products: {
-            where: {
-              isAvailable: true,
-              stock: {
-                gt: 0
-              }
+        products: {
+          where: {
+            isAvailable: true,
+            stock: {
+              gt: 0
             }
           },
-          orderItems: true
+          take: 3,
+          orderBy: {
+            createdAt: 'desc'
+          }
+        },
+        _count: {
+          select: {
+            products: {
+              where: {
+                isAvailable: true,
+                stock: {
+                  gt: 0
+                }
+              }
+            },
+            orderItems: true
+          }
         }
+      },
+      take: 6,
+      orderBy: {
+        createdAt: 'desc'
       }
-    },
-    take: 6,
-    orderBy: {
-      createdAt: 'desc'
-    }
+    })
   })
 }
 
 async function getFeaturedProducts() {
-  return await prisma.product.findMany({
-    where: {
-      isAvailable: true,
-      stock: {
-        gt: 0
+  return await connectWithRetry(async () => {
+    return await prisma.product.findMany({
+      where: {
+        isAvailable: true,
+        stock: {
+          gt: 0
+        },
+        shop: {
+          isActive: true
+        }
       },
-      shop: {
-        isActive: true
-      }
-    },
-    include: {
-      shop: {
-        select: {
-          id: true,
-          name: true,
-          owner: {
-            select: {
-              houseNumber: true
+      include: {
+        shop: {
+          select: {
+            id: true,
+            name: true,
+            owner: {
+              select: {
+                houseNumber: true
+              }
             }
           }
         }
+      },
+      take: 8,
+      orderBy: {
+        createdAt: 'desc'
       }
-    },
-    take: 8,
-    orderBy: {
-      createdAt: 'desc'
-    }
+    })
   })
 }
 

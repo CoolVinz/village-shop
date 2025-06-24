@@ -1,6 +1,6 @@
 import { NextAuthOptions } from 'next-auth'
 import { PrismaAdapter } from '@next-auth/prisma-adapter'
-import { prisma } from './prisma'
+import { prisma, connectWithRetry } from './prisma'
 import { UserRole } from '@prisma/client'
 
 // Extend NextAuth types for our custom user model
@@ -91,8 +91,10 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         // For new logins, fetch user data from database
-        const dbUser = await prisma.user.findUnique({
-          where: { id: user.id }
+        const dbUser = await connectWithRetry(async () => {
+          return await prisma.user.findUnique({
+            where: { id: user.id }
+          })
         })
         
         if (dbUser) {
@@ -120,26 +122,28 @@ export const authOptions: NextAuthOptions = {
     async signIn({ user, account }) {
       if (account?.provider === 'line') {
         try {
-          // Check if user already exists in our database
-          const existingUser = await prisma.user.findUnique({
-            where: { lineId: user.lineId }
-          })
-
-          if (!existingUser) {
-            // Create new user for first-time LINE login
-            await prisma.user.create({
-              data: {
-                id: user.id,
-                name: user.name || 'LINE User',
-                lineId: user.lineId,
-                houseNumber: '', // Will be collected later
-                phone: '',
-                address: '',
-                role: UserRole.CUSTOMER,
-                isActive: true
-              }
+          await connectWithRetry(async () => {
+            // Check if user already exists in our database
+            const existingUser = await prisma.user.findUnique({
+              where: { lineId: user.lineId }
             })
-          }
+
+            if (!existingUser) {
+              // Create new user for first-time LINE login
+              await prisma.user.create({
+                data: {
+                  id: user.id,
+                  name: user.name || 'LINE User',
+                  lineId: user.lineId,
+                  houseNumber: '', // Will be collected later
+                  phone: '',
+                  address: '',
+                  role: UserRole.CUSTOMER,
+                  isActive: true
+                }
+              })
+            }
+          })
           return true
         } catch (error) {
           console.error('Error creating user:', error)
