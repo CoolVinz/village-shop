@@ -1,4 +1,4 @@
-# Deployment Configuration for line-shop.aivinz.xyz
+# Deployment Configuration
 
 ## Environment Variables Required
 
@@ -17,7 +17,7 @@ MINIO_SECRET_KEY="YOUR_MINIO_SECRET_KEY"
 MINIO_BUCKET_NAME="villager-shop"
 
 # NextAuth Configuration (required even when disabled)
-NEXTAUTH_URL="https://line-shop.aivinz.xyz"
+NEXTAUTH_URL="https://YOUR_DOMAIN.com"
 NEXTAUTH_SECRET="YOUR_SECURE_RANDOM_STRING"
 
 # LINE Login Configuration (leave empty for now)
@@ -48,8 +48,8 @@ Replace the placeholder values above with your actual credentials only in your d
 
 ## Testing After Deployment
 
-1. Visit: https://line-shop.aivinz.xyz
-2. Navigate to: https://line-shop.aivinz.xyz/vendor
+1. Visit: https://YOUR_DOMAIN.com
+2. Navigate to: https://YOUR_DOMAIN.com/vendor
 3. Create shops and products without authentication
 
 ## Re-enabling Authentication Later

@@ -56,7 +56,7 @@ src/
 Requires PostgreSQL environment variables:
 - `DATABASE_URL` - PostgreSQL connection string for Prisma
 
-Current connection: `postgres://postgres:F2pMZ2HO1IASnnMCuMqjEoFjGC75R1wcpaUf5OIIX174C4Xev6BhArClvuJJ12kH@82.180.137.92:5437/postgres`
+Current connection: Set via `DATABASE_URL` environment variable
 
 ## Multi-Vendor Database Schema
 
@@ -85,15 +85,15 @@ The project implements a complete multi-vendor marketplace schema in `prisma/sch
 
 ## MinIO Configuration
 
-Self-hosted MinIO storage at `minio-shop.aivinz.xyz`:
+Self-hosted MinIO storage configuration:
 
 ### **Environment Variables:**
 ```env
-MINIO_ENDPOINT="minio-shop.aivinz.xyz"
+MINIO_ENDPOINT="your-minio-endpoint"
 MINIO_PORT=443
 MINIO_USE_SSL=true
-MINIO_ACCESS_KEY="bp4DAfIGFUR2Osgh"
-MINIO_SECRET_KEY="l7CHKsi0WLaaecME74ijMVHFYdG0pEOc"
+MINIO_ACCESS_KEY="your-access-key"
+MINIO_SECRET_KEY="your-secret-key"
 MINIO_BUCKET_NAME="villager-shop"
 ```
 

@@ -5,7 +5,7 @@
 This document outlines comprehensive testing procedures for the complete village marketplace system.
 
 ### 🌐 **Deployment URL**
-**Production**: https://line-shop.aivinz.xyz
+**Production**: [Configure your production URL]
 
 ---
 
@@ -275,7 +275,7 @@ The Village Marketplace successfully provides:
 3. **Real-time Order Management**: Status updates and notifications
 4. **Payment Integration**: Upload and verification system
 5. **Mobile-responsive Design**: Works across all devices
-6. **Production Ready**: Deployed and accessible at https://line-shop.aivinz.xyz
+6. **Production Ready**: Configured for production deployment
 
 **Overall Status: ✅ FULLY FUNCTIONAL**
 
