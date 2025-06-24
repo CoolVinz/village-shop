@@ -54,6 +54,28 @@ Object.entries(requiredEnvVars).forEach(([key, value]) => {
   }
 })
 
+// Validate Prisma client and test connection
+if (!prisma) {
+  console.error('🚨 Prisma client is not initialized!')
+  throw new Error('Database connection failed - Prisma client not available')
+}
+
+// Test database connection during initialization
+async function testDatabaseConnection() {
+  try {
+    await connectWithRetry(async () => {
+      await prisma.$connect()
+      console.log('✅ Database connection successful')
+    })
+  } catch (error) {
+    console.error('🚨 Database connection failed during auth initialization:', error)
+    // Don't throw here to allow fallback authentication methods
+  }
+}
+
+// Initialize database connection test (non-blocking)
+testDatabaseConnection()
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
