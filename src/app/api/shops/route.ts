@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
-
-// import { getServerSession } from 'next-auth'
-// import { authOptions } from '@/lib/auth'
+import { verifyToken, isVendor, isAdmin } from '@/lib/auth'
 
 const createShopSchema = z.object({
   name: z.string().min(1).max(100),
@@ -17,14 +15,24 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🔍 Shop creation API called')
     
-    // TODO: Implement authentication check with custom auth system
-    // const session = await getServerSession(authOptions)
-    // if (!session) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    // }
-    // if (session.user.role !== 'VENDOR' && session.user.role !== 'ADMIN') {
-    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    // }
+    // Check authentication
+    const token = request.cookies.get('auth-token')?.value
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized - Please log in' }, { status: 401 })
+    }
+    
+    const user = verifyToken(token)
+    if (!user) {
+      return NextResponse.json({ error: 'Invalid or expired session' }, { status: 401 })
+    }
+    
+    // Check if user has permission to create shops (VENDOR or ADMIN)
+    if (!isVendor(user.role) && !isAdmin(user.role)) {
+      return NextResponse.json(
+        { error: 'Forbidden - Only vendors and admins can create shops' },
+        { status: 403 }
+      )
+    }
 
     const body = await request.json()
     console.log('📝 Received shop data:', body)
@@ -32,31 +40,30 @@ export async function POST(request: NextRequest) {
     const validatedData = createShopSchema.parse(body)
     console.log('✅ Validated shop data:', validatedData)
 
-    // TODO: Re-enable shop ownership validation after implementing custom auth
     // Check if user already has a shop with this name
-    // console.log('🔍 Checking for existing shop with name:', validatedData.name, 'for user:', session.user.id)
+    console.log('🔍 Checking for existing shop with name:', validatedData.name, 'for user:', user.id)
     
-    // const existingShop = await prisma.shop.findFirst({
-    //   where: {
-    //     ownerId: session.user.id,
-    //     name: validatedData.name,
-    //   }
-    // })
+    const existingShop = await prisma.shop.findFirst({
+      where: {
+        ownerId: user.id,
+        name: validatedData.name,
+      }
+    })
 
-    // if (existingShop) {
-    //   console.log('❌ Shop already exists:', existingShop)
-    //   return NextResponse.json(
-    //     { error: 'You already have a shop with this name' },
-    //     { status: 400 }
-    //   )
-    // }
+    if (existingShop) {
+      console.log('❌ Shop already exists:', existingShop)
+      return NextResponse.json(
+        { error: 'You already have a shop with this name' },
+        { status: 400 }
+      )
+    }
 
     console.log('✅ Creating new shop...')
     const { logoUrl, ...shopData } = validatedData
     const shop = await prisma.shop.create({
       data: {
         ...shopData,
-        ownerId: 'temp-user-id', // TODO: Replace with actual user ID from custom auth
+        ownerId: user.id
         ...(logoUrl && logoUrl !== '' && { logoUrl }),
       },
       include: {
@@ -126,8 +133,19 @@ export async function GET(request: NextRequest) {
         //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         // }
         
+        // Get current user
+        const token = request.cookies.get('auth-token')?.value
+        if (!token) {
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+        
+        const user = verifyToken(token)
+        if (!user) {
+          return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
+        }
+        
         shops = await prisma.shop.findMany({
-          where: { ownerId: 'temp-user-id' }, // TODO: Replace with actual user ID
+          where: { ownerId: user.id }
           include: {
             owner: {
               select: {
