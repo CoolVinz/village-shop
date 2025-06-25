@@ -33,6 +33,29 @@ export async function POST(request: NextRequest) {
     const validatedData = createOrderSchema.parse(body)
     console.log('✅ Validated order data:', validatedData)
 
+    // Additional business logic validation for delivery time
+    if (validatedData.deliveryTime) {
+      const deliveryDate = new Date(validatedData.deliveryTime)
+      const now = new Date()
+      const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000)
+      
+      if (deliveryDate < twoHoursFromNow) {
+        return NextResponse.json(
+          { error: 'Delivery time must be at least 2 hours from now' },
+          { status: 400 }
+        )
+      }
+      
+      // Check business hours (9 AM - 6 PM)
+      const hour = deliveryDate.getHours()
+      if (hour < 9 || hour >= 18) {
+        return NextResponse.json(
+          { error: 'Delivery time must be between 9 AM and 6 PM' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Create or find customer user
     let customer = await prisma.user.findUnique({
       where: { houseNumber: validatedData.customerHouseNumber }

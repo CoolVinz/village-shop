@@ -61,6 +61,25 @@ export default function CheckoutPage() {
       return
     }
 
+    // Validate delivery time if provided
+    if (deliveryTime) {
+      const selectedTime = new Date(deliveryTime)
+      const now = new Date()
+      const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000)
+      
+      if (selectedTime < twoHoursFromNow) {
+        toast.error('Delivery time must be at least 2 hours from now')
+        return
+      }
+      
+      // Check business hours (9 AM - 6 PM)
+      const hour = selectedTime.getHours()
+      if (hour < 9 || hour >= 18) {
+        toast.error('Delivery time must be between 9 AM and 6 PM')
+        return
+      }
+    }
+
     setIsSubmitting(true)
 
     try {
@@ -69,7 +88,7 @@ export default function CheckoutPage() {
         customerName: customerInfo.name,
         customerHouseNumber: customerInfo.houseNumber,
         customerPhone: customerInfo.phone,
-        deliveryTime: deliveryTime || null,
+        deliveryTime: deliveryTime ? new Date(deliveryTime).toISOString() : null,
         notes: customerInfo.notes || null,
         items: state.items.map(item => ({
           productId: item.productId,
@@ -190,8 +209,11 @@ export default function CheckoutPage() {
                     type="datetime-local"
                     value={deliveryTime}
                     onChange={(e) => setDeliveryTime(e.target.value)}
-                    min={new Date().toISOString().slice(0, 16)}
+                    min={new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString().slice(0, 16)}
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Delivery available 9 AM - 6 PM, minimum 2 hours from now
+                  </p>
                 </div>
                 
                 <div>
