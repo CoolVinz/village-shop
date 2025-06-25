@@ -83,12 +83,18 @@ export default function CheckoutPage() {
     setIsSubmitting(true)
 
     try {
-      // Create the order
+      // Create the order with debug logging
+      const convertedDeliveryTime = deliveryTime ? new Date(deliveryTime).toISOString() : null
+      console.log('🔍 Frontend datetime conversion:', {
+        original: deliveryTime,
+        converted: convertedDeliveryTime
+      })
+      
       const orderData = {
         customerName: customerInfo.name,
         customerHouseNumber: customerInfo.houseNumber,
         customerPhone: customerInfo.phone,
-        deliveryTime: deliveryTime ? new Date(deliveryTime).toISOString() : null,
+        deliveryTime: convertedDeliveryTime,
         notes: customerInfo.notes || null,
         items: state.items.map(item => ({
           productId: item.productId,
