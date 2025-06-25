@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     const shop = await prisma.shop.create({
       data: {
         ...shopData,
-        ownerId: user.id
+        ownerId: user.id,
         ...(logoUrl && logoUrl !== '' && { logoUrl }),
       },
       include: {
@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
         }
         
         shops = await prisma.shop.findMany({
-          where: { ownerId: user.id }
+          where: { ownerId: user.id },
           include: {
             owner: {
               select: {
