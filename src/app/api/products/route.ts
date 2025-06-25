@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
-
-// AUTHENTICATION COMPLETELY DISABLED FOR DEVELOPMENT
-// import { getServerSession } from 'next-auth'
-// import { authOptions } from '@/lib/auth'
+import { verifyToken, isVendor, isAdmin } from '@/lib/auth'
 
 const createProductSchema = z.object({
   name: z.string().min(1).max(100),
@@ -19,22 +16,23 @@ const createProductSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    // TEMPORARILY DISABLED AUTHENTICATION FOR DEVELOPMENT
-    // const session = await getServerSession(authOptions)
-    // if (!session) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    // }
-    // if (session.user.role !== 'VENDOR' && session.user.role !== 'ADMIN') {
-    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    // }
-
-    // Mock session for development
-    const session = {
-      user: {
-        id: 'dev-user-1',
-        name: 'Development User',
-        role: 'VENDOR'
-      }
+    // Check authentication
+    const token = request.cookies.get('auth-token')?.value
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized - Please log in' }, { status: 401 })
+    }
+    
+    const user = verifyToken(token)
+    if (!user) {
+      return NextResponse.json({ error: 'Invalid or expired session' }, { status: 401 })
+    }
+    
+    // Check if user has permission to create products (VENDOR or ADMIN)
+    if (!isVendor(user.role) && !isAdmin(user.role)) {
+      return NextResponse.json(
+        { error: 'Forbidden - Only vendors and admins can create products' },
+        { status: 403 }
+      )
     }
 
     const body = await request.json()
@@ -49,7 +47,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Shop not found' }, { status: 404 })
     }
 
-    if (shop.ownerId !== session.user.id && session.user.role !== 'ADMIN') {
+    if (shop.ownerId !== user.id && !isAdmin(user.role)) {
       return NextResponse.json({ error: 'You do not own this shop' }, { status: 403 })
     }
 
