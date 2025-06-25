@@ -1,6 +1,7 @@
-// import { getServerSession } from 'next-auth'
-// import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { verifyToken } from '@/lib/auth'
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { 
@@ -94,15 +95,32 @@ async function getVendorStats(userId: string) {
 }
 
 export default async function VendorDashboard() {
-  // TEMPORARILY DISABLED AUTHENTICATION FOR DEVELOPMENT
-  // const session = await getServerSession(authOptions)
-  // if (!session) {
-  //   return <div>Please sign in</div>
-  // }
-
-  // Use mock user ID for development
-  const mockUserId = 'dev-user-1'
-  const stats = await getVendorStats(mockUserId)
+  // Get authentication token from cookies
+  const cookieStore = await cookies()
+  const token = cookieStore.get('auth-token')?.value
+  
+  if (!token) {
+    redirect('/auth/login')
+  }
+  
+  const user = verifyToken(token)
+  if (!user) {
+    redirect('/auth/login')
+  }
+  
+  // Check if user is vendor or admin
+  if (user.role !== 'VENDOR' && user.role !== 'ADMIN') {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
+          <p className="text-gray-600">Only vendors and admins can access this page.</p>
+        </div>
+      </div>
+    )
+  }
+  
+  const stats = await getVendorStats(user.id)
 
   return (
     <div className="space-y-6">
