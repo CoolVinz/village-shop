@@ -16,16 +16,22 @@ async function main() {
 
   // Create Admin User
   console.log('👑 Creating admin user...')
+  const bcrypt = require('bcryptjs')
+  const adminPassword = await bcrypt.hash('admin123', 12)
+  
   const admin = await prisma.user.create({
     data: {
       id: 'admin-user-1',
       name: 'System Administrator',
+      username: 'admin',
+      password: adminPassword,
       houseNumber: '001',
       lineId: 'admin-line',
       phone: '+66-999-999-999',
       address: 'Village Office, Main Street',
       role: 'ADMIN',
-      isActive: true
+      isActive: true,
+      profileComplete: true
     }
   })
 
