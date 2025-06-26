@@ -1,7 +1,8 @@
-// import { getServerSession } from 'next-auth'
 import Link from 'next/link'
-// import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { verifyToken } from '@/lib/auth'
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -12,7 +13,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { VendorSelector } from '@/components/dev/vendor-selector'
 import Image from 'next/image'
 
 async function getVendorProducts(userId: string) {
@@ -42,32 +42,38 @@ async function getVendorProducts(userId: string) {
 }
 
 export default async function VendorProductsPage() {
-  // TEMPORARILY DISABLED AUTHENTICATION FOR DEVELOPMENT
-  // const session = await getServerSession(authOptions)
-  // if (!session) {
-  //   return <div>Please sign in</div>
-  // }
+  // Get authentication token from cookies
+  const cookieStore = await cookies()
+  const token = cookieStore.get('auth-token')?.value
 
-  // Mock user IDs for development testing:
-  // vendor-1: Somchai Jaidee (4 products)
-  // vendor-2: Malee Kaewjai (3 products) 
-  // vendor-3: Niran Thongchai (3 products)
-  // cmcbdfmiq0000q90kgu67wq6h: aivinz (3 products)
-  const mockUserId = 'vendor-1' // Somchai Jaidee who has 4 products
-  const products = await getVendorProducts(mockUserId)
+  if (!token) {
+    redirect('/auth/login?redirect=/vendor/products')
+  }
+
+  // Verify the token and get user info
+  const user = verifyToken(token)
+  if (!user) {
+    redirect('/auth/login?redirect=/vendor/products')
+  }
+
+  // Check if user has vendor role
+  if (user.role !== 'VENDOR' && user.role !== 'ADMIN') {
+    redirect('/auth/login?error=insufficient_permissions')
+  }
+
+  // Get products for the authenticated user
+  const products = await getVendorProducts(user.id)
   
   // Debug information for development
-  console.log(`🔍 Vendor Products Debug: Using user ${mockUserId}, found ${products.length} products`)
+  console.log(`🔍 Vendor Products Debug: Authenticated user ${user.name} (${user.id}), found ${products.length} products`)
 
   return (
     <div className="space-y-6">
-      <VendorSelector currentVendor={mockUserId} />
-      
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Products</h1>
           <p className="text-gray-600">
-            Manage your product catalog across all shops
+            Manage your product catalog across all shops • Logged in as {user.name}
           </p>
         </div>
         <Link href="/vendor/products/create">
