@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-// import { getServerSession } from 'next-auth'
-// import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { verifyToken } from '@/lib/auth'
 import { z } from 'zod'
 
 const updateShopSchema = z.object({
@@ -62,12 +61,17 @@ export async function PUT(
 ) {
   try {
     const { id } = await params
-    // TODO: Implement authentication check with custom auth system
-    // const session = await getServerSession(authOptions)
-    // 
-    // if (!session) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    // }
+    
+    // Authenticate user
+    const token = request.cookies.get('auth-token')?.value
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const user = verifyToken(token)
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
     // Check if shop exists and user owns it
     const existingShop = await prisma.shop.findUnique({
@@ -78,10 +82,10 @@ export async function PUT(
       return NextResponse.json({ error: 'Shop not found' }, { status: 404 })
     }
 
-    // TODO: Re-enable ownership validation after implementing custom auth
-    // if (existingShop.ownerId !== session.user.id && session.user.role !== 'ADMIN') {
-    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    // }
+    // Verify ownership (only shop owner or admin can edit)
+    if (existingShop.ownerId !== user.id && user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden - You can only edit your own shops' }, { status: 403 })
+    }
 
     const body = await request.json()
     const validatedData = updateShopSchema.parse(body)
@@ -124,12 +128,17 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
-    // TODO: Implement authentication check with custom auth system
-    // const session = await getServerSession(authOptions)
-    // 
-    // if (!session) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    // }
+    
+    // Authenticate user
+    const token = request.cookies.get('auth-token')?.value
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const user = verifyToken(token)
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
     // Check if shop exists and user owns it
     const existingShop = await prisma.shop.findUnique({
@@ -140,10 +149,10 @@ export async function DELETE(
       return NextResponse.json({ error: 'Shop not found' }, { status: 404 })
     }
 
-    // TODO: Re-enable ownership validation after implementing custom auth
-    // if (existingShop.ownerId !== session.user.id && session.user.role !== 'ADMIN') {
-    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    // }
+    // Verify ownership (only shop owner or admin can delete)
+    if (existingShop.ownerId !== user.id && user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden - You can only delete your own shops' }, { status: 403 })
+    }
 
     await prisma.shop.delete({
       where: { id }
