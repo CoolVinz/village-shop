@@ -90,10 +90,16 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
   const fetchProduct = async () => {
     try {
+      console.log('🚀 Fetching product with ID:', productId)
       const response = await fetch(`/api/products/${productId}`)
+      console.log('📡 API Response status:', response.status)
+      
       if (!response.ok) {
-        throw new Error('Product not found')
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        console.error('❌ API Error:', errorData)
+        throw new Error(errorData.error || `HTTP ${response.status}: Product not found`)
       }
+      
       const productData = await response.json()
       console.log('🔍 Product data loaded:', productData)
       console.log('🖼️ Image URLs:', productData.imageUrls)

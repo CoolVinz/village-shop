@@ -20,6 +20,8 @@ export async function GET(
 ) {
   try {
     const { id } = await params
+    console.log('🔍 API: Fetching product with ID:', id)
+    
     const product = await prisma.product.findUnique({
       where: { id },
       include: {
@@ -38,15 +40,21 @@ export async function GET(
       }
     })
 
+    console.log('📦 API: Product found:', product ? 'YES' : 'NO')
+    if (product) {
+      console.log('🖼️ API: Product images:', product.imageUrls)
+    }
+
     if (!product) {
+      console.log('❌ API: Product not found in database')
       return NextResponse.json({ error: 'Product not found' }, { status: 404 })
     }
 
     return NextResponse.json(product)
   } catch (error) {
-    console.error('Error fetching product:', error)
+    console.error('❌ API: Error fetching product:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }
