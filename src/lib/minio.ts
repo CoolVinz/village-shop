@@ -1,6 +1,6 @@
 import { Client } from 'minio'
 
-export const BUCKET_NAME = process.env.MINIO_BUCKET_NAME || 'villager-shop'
+export const BUCKET_NAME = process.env.MINIO_BUCKET_NAME || 'villagershop'
 
 // Lazy-load MinIO client to avoid build-time environment variable issues
 let minioClientInstance: Client | null = null
