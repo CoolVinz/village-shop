@@ -20,7 +20,7 @@ interface Shop {
   owner: {
     id: string
     name: string
-    houseNumber: string
+    houseNumber: string | null
   }
 }
 
