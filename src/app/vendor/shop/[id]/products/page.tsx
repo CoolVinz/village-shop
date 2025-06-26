@@ -149,6 +149,9 @@ async function ShopProductsContent({ shopId }: { shopId: string }) {
                     alt={product.name}
                     fill
                     className="object-cover"
+                    onError={() => {
+                      console.error('Image load error for product:', product.id, 'URL:', product.imageUrls[0])
+                    }}
                   />
                 ) : (
                   <div className="flex items-center justify-center h-full">

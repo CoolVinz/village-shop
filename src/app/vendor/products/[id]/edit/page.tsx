@@ -95,6 +95,8 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         throw new Error('Product not found')
       }
       const productData = await response.json()
+      console.log('🔍 Product data loaded:', productData)
+      console.log('🖼️ Image URLs:', productData.imageUrls)
       setProduct(productData)
       setExistingImages(productData.imageUrls || [])
       
@@ -411,11 +413,9 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                           alt={`Product image ${index + 1}`}
                           fill
                           className="object-cover"
-                          onError={(e) => {
-                            console.error('Image load error:', url)
-                            e.currentTarget.src = '/placeholder-image.jpg'
+                          onError={() => {
+                            console.error('Image load error for URL:', url)
                           }}
-                          unoptimized
                         />
                       </div>
                       <Button
@@ -446,7 +446,6 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                           alt={`New image ${index + 1}`}
                           fill
                           className="object-cover"
-                          unoptimized
                         />
                       </div>
                       <Button
