@@ -20,7 +20,7 @@ import Link from 'next/link'
 const productSchema = z.object({
   name: z.string().min(1, 'Product name is required').max(100, 'Product name is too long'),
   description: z.string().max(1000, 'Description is too long').optional(),
-  price: z.number().min(0.01, 'Price must be greater than 0'),
+  price: z.number().min(1, 'Price must be at least 1 THB'),
   stock: z.number().min(0, 'Stock cannot be negative').int(),
   category: z.string().optional(),
   shopId: z.string().min(1, 'Please select a shop'),
@@ -346,9 +346,10 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                 <Input
                   id="price"
                   type="number"
-                  step="0.01"
+                  step="1"
+                  min="1"
                   {...register('price', { valueAsNumber: true })}
-                  placeholder="0.00"
+                  placeholder="100"
                 />
                 {errors.price && (
                   <p className="text-sm text-red-500">{errors.price.message}</p>
@@ -404,13 +405,19 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
                   {existingImages.map((url, index) => (
                     <div key={index} className="relative">
-                      <Image
-                        src={url}
-                        alt={`Product image ${index + 1}`}
-                        width={150}
-                        height={150}
-                        className="rounded-lg object-cover"
-                      />
+                      <div className="w-[150px] h-[150px] relative overflow-hidden rounded-lg bg-gray-100">
+                        <Image
+                          src={url}
+                          alt={`Product image ${index + 1}`}
+                          fill
+                          className="object-cover"
+                          onError={(e) => {
+                            console.error('Image load error:', url)
+                            e.currentTarget.src = '/placeholder-image.jpg'
+                          }}
+                          unoptimized
+                        />
+                      </div>
                       <Button
                         type="button"
                         variant="destructive"
@@ -433,13 +440,15 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
                   {imagePreviews.map((preview, index) => (
                     <div key={index} className="relative">
-                      <Image
-                        src={preview}
-                        alt={`New image ${index + 1}`}
-                        width={150}
-                        height={150}
-                        className="rounded-lg object-cover"
-                      />
+                      <div className="w-[150px] h-[150px] relative overflow-hidden rounded-lg bg-gray-100">
+                        <Image
+                          src={preview}
+                          alt={`New image ${index + 1}`}
+                          fill
+                          className="object-cover"
+                          unoptimized
+                        />
+                      </div>
                       <Button
                         type="button"
                         variant="destructive"

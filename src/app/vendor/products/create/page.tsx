@@ -19,7 +19,7 @@ import Image from 'next/image'
 const productSchema = z.object({
   name: z.string().min(1, 'Product name is required').max(100, 'Product name is too long'),
   description: z.string().max(1000, 'Description is too long').optional(),
-  price: z.number().min(0.01, 'Price must be greater than 0'),
+  price: z.number().min(1, 'Price must be at least 1 THB'),
   stock: z.number().min(0, 'Stock cannot be negative').int(),
   category: z.string().optional(),
   shopId: z.string().min(1, 'Please select a shop'),
@@ -324,9 +324,10 @@ export default function CreateProductPage() {
                 <Input
                   id="price"
                   type="number"
-                  step="0.01"
+                  step="1"
+                  min="1"
                   {...register('price', { valueAsNumber: true })}
-                  placeholder="0.00"
+                  placeholder="100"
                 />
                 {errors.price && (
                   <p className="text-sm text-red-600">{errors.price.message}</p>
