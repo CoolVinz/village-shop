@@ -12,6 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { VendorSelector } from '@/components/dev/vendor-selector'
 import Image from 'next/image'
 
 async function getVendorProducts(userId: string) {
@@ -47,12 +48,21 @@ export default async function VendorProductsPage() {
   //   return <div>Please sign in</div>
   // }
 
-  // Use mock user ID for development
-  const mockUserId = 'dev-user-1'
+  // Mock user IDs for development testing:
+  // vendor-1: Somchai Jaidee (4 products)
+  // vendor-2: Malee Kaewjai (3 products) 
+  // vendor-3: Niran Thongchai (3 products)
+  // cmcbdfmiq0000q90kgu67wq6h: aivinz (3 products)
+  const mockUserId = 'vendor-1' // Somchai Jaidee who has 4 products
   const products = await getVendorProducts(mockUserId)
+  
+  // Debug information for development
+  console.log(`🔍 Vendor Products Debug: Using user ${mockUserId}, found ${products.length} products`)
 
   return (
     <div className="space-y-6">
+      <VendorSelector currentVendor={mockUserId} />
+      
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Products</h1>
