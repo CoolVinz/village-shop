@@ -1,0 +1,439 @@
+// Normalized Database Schema - Backend Performance Optimized
+// Design Philosophy: Reliability & Performance > Features > Convenience
+// Target: 99.9% uptime, <100ms queries, 10x scalability
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ================================
+// NORMALIZED CORE ENTITIES (3NF)
+// ================================
+
+// User entity with address normalization
+model User {
+  id              String    @id @default(cuid())
+  name            String
+  username        String?   @unique
+  password        String?
+  phone           String?
+  role            UserRole  @default(CUSTOMER)
+  isActive        Boolean   @default(true)
+  
+  // LINE Login integration
+  lineId          String?   @unique
+  email           String?   @unique
+  image           String?
+  emailVerified   DateTime?
+  profileComplete Boolean   @default(false)
+  
+  // Address normalization
+  addressId       String?
+  address         Address?  @relation(fields: [addressId], references: [id])
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  shops           Shop[]    @relation("ShopOwner")
+  orders          Order[]   @relation("CustomerOrders")
+
+  // Performance indexes
+  @@index([email])
+  @@index([lineId])
+  @@index([role, isActive])
+  @@index([addressId])
+  @@map("users")
+}
+
+// Normalized address entity (3NF)
+model Address {
+  id           String  @id @default(cuid())
+  houseNumber  String
+  street       String?
+  village      String?
+  district     String?
+  province     String?
+  postalCode   String?
+  latitude     Decimal? @db.Decimal(10, 8)
+  longitude    Decimal? @db.Decimal(11, 8)
+  
+  // Delivery zone optimization
+  deliveryZone String?
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Relations
+  users        User[]
+  shops        Shop[]
+
+  // Performance indexes for delivery optimization
+  @@index([houseNumber])
+  @@index([district])
+  @@index([deliveryZone])
+  @@index([latitude, longitude])
+  @@map("addresses")
+}
+
+// Hierarchical product categories (3NF)
+model ProductCategory {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  iconUrl     String?
+  
+  // Hierarchical structure
+  parentId    String?
+  parent      ProductCategory? @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    ProductCategory[] @relation("CategoryHierarchy")
+  
+  // Performance & SEO
+  sortOrder   Int       @default(0)
+  isActive    Boolean   @default(true)
+  seoTitle    String?
+  seoDescription String?
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  products    Product[]
+
+  // Performance indexes
+  @@index([slug])
+  @@index([parentId])
+  @@index([isActive, sortOrder])
+  @@map("product_categories")
+}
+
+// Shop entity with address normalization
+model Shop {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?
+  logoUrl     String?
+  
+  // Business information
+  businessType String?
+  taxId        String?   @unique
+  
+  // Address normalization
+  addressId    String?
+  address      Address?  @relation(fields: [addressId], references: [id])
+  
+  // Performance metrics
+  rating       Decimal?  @db.Decimal(3, 2)
+  reviewCount  Int       @default(0)
+  orderCount   Int       @default(0)
+  
+  ownerId      String
+  isActive     Boolean   @default(true)
+  isVerified   Boolean   @default(false)
+  
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  
+  // Relations
+  owner        User      @relation("ShopOwner", fields: [ownerId], references: [id])
+  products     Product[]
+  orderItems   OrderItem[]
+
+  // Performance indexes
+  @@index([slug])
+  @@index([ownerId])
+  @@index([isActive, isVerified])
+  @@index([addressId])
+  @@index([rating])
+  @@map("shops")
+}
+
+// Product entity with category normalization
+model Product {
+  id           String    @id @default(cuid())
+  name         String
+  slug         String    @unique
+  description  String?
+  
+  // Pricing & inventory
+  basePrice    Decimal   @db.Decimal(10, 2)
+  comparePrice Decimal?  @db.Decimal(10, 2)
+  costPrice    Decimal?  @db.Decimal(10, 2)
+  
+  // SEO & marketing
+  seoTitle     String?
+  seoDescription String?
+  tags         String[]  @default([])
+  
+  // Category normalization
+  categoryId   String?
+  category     ProductCategory? @relation(fields: [categoryId], references: [id])
+  
+  // Media management
+  images       ProductImage[]
+  
+  // Inventory & availability
+  trackInventory Boolean @default(true)
+  allowBackorder Boolean @default(false)
+  isAvailable    Boolean @default(true)
+  
+  // Performance metrics
+  viewCount      Int     @default(0)
+  orderCount     Int     @default(0)
+  rating         Decimal? @db.Decimal(3, 2)
+  reviewCount    Int     @default(0)
+  
+  shopId       String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Relations
+  shop         Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  variants     ProductVariant[]
+  orderItems   OrderItem[]
+
+  // Performance indexes
+  @@index([slug])
+  @@index([shopId, isAvailable])
+  @@index([categoryId, isAvailable])
+  @@index([basePrice])
+  @@index([rating])
+  @@index([orderCount])
+  @@map("products")
+}
+
+// Product variants for size/color/options (3NF)
+model ProductVariant {
+  id          String    @id @default(cuid())
+  productId   String
+  sku         String    @unique
+  name        String    // "Large Red", "Small Blue"
+  
+  // Variant-specific pricing
+  price       Decimal   @db.Decimal(10, 2)
+  comparePrice Decimal? @db.Decimal(10, 2)
+  costPrice   Decimal?  @db.Decimal(10, 2)
+  
+  // Inventory
+  stock       Int       @default(0)
+  lowStockThreshold Int @default(5)
+  
+  // Display
+  isDefault   Boolean   @default(false)
+  sortOrder   Int       @default(0)
+  isActive    Boolean   @default(true)
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderItems  OrderItem[]
+
+  // Performance indexes
+  @@index([productId])
+  @@index([sku])
+  @@index([isActive, sortOrder])
+  @@map("product_variants")
+}
+
+// Normalized image management (3NF)
+model ProductImage {
+  id          String   @id @default(cuid())
+  productId   String
+  url         String
+  altText     String?
+  sortOrder   Int      @default(0)
+  width       Int?
+  height      Int?
+  fileSize    Int?
+  
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Performance indexes
+  @@index([productId, sortOrder])
+  @@map("product_images")
+}
+
+// ================================
+// TRANSACTION ENTITIES
+// ================================
+
+// Order entity with performance optimization
+model Order {
+  id                 String       @id @default(cuid())
+  orderNumber        String       @unique // Human-readable order number
+  
+  // Customer information (denormalized for performance)
+  customerId         String
+  customerHouseNumber String
+  
+  // Pricing
+  subtotalAmount     Decimal      @db.Decimal(10, 2)
+  taxAmount          Decimal      @db.Decimal(10, 2) @default(0)
+  shippingAmount     Decimal      @db.Decimal(10, 2) @default(0)
+  discountAmount     Decimal      @db.Decimal(10, 2) @default(0)
+  totalAmount        Decimal      @db.Decimal(10, 2)
+  
+  // Delivery
+  deliveryTime       DateTime?
+  deliveryAddress    String?
+  deliveryNotes      String?
+  
+  // Status tracking
+  status             OrderStatus  @default(PENDING)
+  notes              String?
+  
+  // Performance tracking
+  processingTime     Int?         // Seconds from order to ready
+  
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  confirmedAt        DateTime?
+  deliveredAt        DateTime?
+  
+  // Relations
+  customer           User         @relation("CustomerOrders", fields: [customerId], references: [id])
+  orderItems         OrderItem[]
+  paymentSlips       PaymentSlip[]
+  statusHistory      OrderStatusHistory[]
+
+  // Performance indexes for common queries
+  @@index([customerId, createdAt])
+  @@index([status, createdAt])
+  @@index([deliveryTime, status])
+  @@index([orderNumber])
+  @@index([createdAt]) // For pagination
+  @@map("orders")
+}
+
+// Order items with variant support
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  productId   String
+  variantId   String?
+  shopId      String
+  
+  // Snapshot pricing (immutable)
+  quantity    Int
+  unitPrice   Decimal @db.Decimal(10, 2)
+  totalPrice  Decimal @db.Decimal(10, 2)
+  
+  // Product snapshot (for historical accuracy)
+  productName String
+  variantName String?
+  productImage String?
+  
+  status      OrderItemStatus @default(PENDING)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [productId], references: [id])
+  variant     ProductVariant? @relation(fields: [variantId], references: [id])
+  shop        Shop     @relation(fields: [shopId], references: [id])
+
+  // Performance indexes
+  @@index([orderId])
+  @@index([shopId, status])
+  @@index([productId])
+  @@map("order_items")
+}
+
+// Order status history for tracking
+model OrderStatusHistory {
+  id        String      @id @default(cuid())
+  orderId   String
+  status    OrderStatus
+  notes     String?
+  createdBy String?     // User who changed status
+  createdAt DateTime    @default(now())
+  
+  // Relations
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+  @@map("order_status_history")
+}
+
+// Payment management
+model PaymentSlip {
+  id          String        @id @default(cuid())
+  orderId     String
+  
+  // Payment details
+  amount      Decimal       @db.Decimal(10, 2)
+  imageUrl    String
+  
+  // Bank transfer details
+  bankName    String?
+  accountNumber String?
+  transferDate DateTime?
+  referenceNumber String?
+  
+  status      PaymentStatus @default(PENDING)
+  notes       String?
+  verifiedBy  String?       // Admin who verified
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  verifiedAt  DateTime?
+  
+  // Relations
+  order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([status, createdAt])
+  @@map("payment_slips")
+}
+
+// ================================
+// ENUMS
+// ================================
+
+enum UserRole {
+  CUSTOMER
+  VENDOR
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  READY_FOR_DELIVERY
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum OrderItemStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  READY
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  REFUNDED
+}
