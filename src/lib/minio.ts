@@ -40,19 +40,49 @@ export const BUCKET_FOLDERS = {
   USERS: 'users',
 } as const
 
-// Initialize bucket and ensure it exists
+// Initialize bucket and ensure it exists with proper permissions
 export async function initializeBucket() {
   try {
     const minioClient = getMinioClient()
     const bucketExists = await minioClient.bucketExists(BUCKET_NAME)
+    
     if (!bucketExists) {
       await minioClient.makeBucket(BUCKET_NAME, 'us-east-1')
       console.log(`✅ Created bucket: ${BUCKET_NAME}`)
     } else {
       console.log(`✅ Bucket ${BUCKET_NAME} already exists`)
     }
+
+    // Set bucket policy to allow public read access
+    await setBucketPublicReadPolicy()
+    
   } catch (error) {
     console.error('❌ Error initializing MinIO bucket:', error)
+    throw error
+  }
+}
+
+// Set bucket policy to allow public read access for all objects
+export async function setBucketPublicReadPolicy() {
+  try {
+    const minioClient = getMinioClient()
+    
+    const publicReadPolicy = {
+      Version: '2012-10-17',
+      Statement: [
+        {
+          Effect: 'Allow',
+          Principal: { AWS: ['*'] },
+          Action: ['s3:GetObject'],
+          Resource: [`arn:aws:s3:::${BUCKET_NAME}/*`]
+        }
+      ]
+    }
+
+    await minioClient.setBucketPolicy(BUCKET_NAME, JSON.stringify(publicReadPolicy))
+    console.log(`✅ Set public read policy for bucket: ${BUCKET_NAME}`)
+  } catch (error) {
+    console.error('❌ Error setting bucket policy:', error)
     throw error
   }
 }
