@@ -3,11 +3,10 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Package, Clock, CheckCircle, XCircle } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
+import { verifyToken } from '@/lib/auth'
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
 import OrderItemCard from '@/components/vendor/order-item-card'
-
-// TEMPORARILY DISABLED AUTHENTICATION FOR DEVELOPMENT
-// import { getServerSession } from 'next-auth'
-// import { authOptions } from '@/lib/auth'
 
 async function getVendorOrders(vendorId: string) {
   const orderItems = await prisma.orderItem.findMany({
@@ -56,15 +55,30 @@ async function getVendorOrders(vendorId: string) {
 
 
 async function OrdersContent() {
-  // TEMPORARILY DISABLED AUTHENTICATION FOR DEVELOPMENT
-  // const session = await getServerSession(authOptions)
-  // if (!session) {
-  //   redirect('/auth/signin')
-  // }
+  // Get authentication token from cookies
+  const cookieStore = await cookies()
+  const token = cookieStore.get('auth-token')?.value
 
-  // Mock user for development
-  const mockUserId = 'dev-user-1'
-  const orderItems = await getVendorOrders(mockUserId)
+  if (!token) {
+    redirect('/auth/login?redirect=/vendor/orders')
+  }
+
+  // Verify the token and get user info
+  const user = verifyToken(token)
+  if (!user) {
+    redirect('/auth/login?redirect=/vendor/orders')
+  }
+
+  // Check if user has vendor role
+  if (user.role !== 'VENDOR' && user.role !== 'ADMIN') {
+    redirect('/auth/login?error=insufficient_permissions')
+  }
+
+  // Get orders for the authenticated user
+  const orderItems = await getVendorOrders(user.id)
+  
+  // Debug information for development
+  console.log(`🔍 Vendor Orders Debug: Authenticated user ${user.name} (${user.id}), found ${orderItems.length} order items`)
 
   // Group order items by status
   const groupedOrders = {
