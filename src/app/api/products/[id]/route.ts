@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
+import { findProductBySlugOrId } from '@/lib/db-helpers'
 import { z } from 'zod'
 
 const updateProductSchema = z.object({
@@ -20,10 +21,16 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    console.log('🔍 API: Fetching product with ID:', id)
+    console.log('🔍 API: Fetching product with slug/ID:', id)
     
+    const foundProduct = await findProductBySlugOrId(id)
+    if (!foundProduct) {
+      console.log('❌ API: Product not found in database')
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 })
+    }
+
     const product = await prisma.product.findUnique({
-      where: { id },
+      where: { id: foundProduct.id },
       include: {
         shop: {
           select: {
@@ -78,9 +85,15 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Find product by slug or ID
+    const foundProduct = await findProductBySlugOrId(id)
+    if (!foundProduct) {
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 })
+    }
+
     // Check if product exists and user owns it
     const existingProduct = await prisma.product.findUnique({
-      where: { id },
+      where: { id: foundProduct.id },
       include: {
         shop: {
           select: {
@@ -114,7 +127,7 @@ export async function PUT(
     }
 
     const product = await prisma.product.update({
-      where: { id },
+      where: { id: foundProduct.id },
       data: validatedData,
       include: {
         shop: {
@@ -162,9 +175,15 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Find product by slug or ID
+    const foundProduct = await findProductBySlugOrId(id)
+    if (!foundProduct) {
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 })
+    }
+
     // Check if product exists and user owns it
     const existingProduct = await prisma.product.findUnique({
-      where: { id },
+      where: { id: foundProduct.id },
       include: {
         shop: {
           select: {
@@ -184,7 +203,7 @@ export async function DELETE(
     }
 
     await prisma.product.delete({
-      where: { id }
+      where: { id: foundProduct.id }
     })
 
     return NextResponse.json({ success: true })

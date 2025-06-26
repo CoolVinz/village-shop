@@ -6,15 +6,22 @@ import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Store, MapPin, Package } from 'lucide-react'
 import { AddToCartButton } from '@/components/product/add-to-cart-button'
 import { prisma } from '@/lib/prisma'
+import { findProductBySlugOrId, getProductUrl, getShopUrl } from '@/lib/db-helpers'
 import Image from 'next/image'
 
 interface ProductPageProps {
   params: Promise<{ id: string }>
 }
 
-async function getProduct(id: string) {
+async function getProduct(slugOrId: string) {
+  const product = await findProductBySlugOrId(slugOrId)
+  
+  if (!product) {
+    return null
+  }
+
   return await prisma.product.findUnique({
-    where: { id },
+    where: { id: product.id },
     include: {
       shop: {
         include: {
@@ -32,7 +39,7 @@ async function getProduct(id: string) {
                 gt: 0
               },
               NOT: {
-                id: id
+                id: product.id
               }
             },
             take: 4,
@@ -167,7 +174,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
                 </div>
               </CardHeader>
               <CardContent>
-                <Link href={`/shops/${product.shop.id}`}>
+                <Link href={getShopUrl(product.shop)}>
                   <Button variant="outline" className="w-full">
                     Visit Shop
                   </Button>
@@ -246,7 +253,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
                   </CardHeader>
                   
                   <CardContent className="pt-0">
-                    <Link href={`/products/${relatedProduct.id}`}>
+                    <Link href={getProductUrl(relatedProduct)}>
                       <Button className="w-full" size="sm">
                         View Details
                       </Button>

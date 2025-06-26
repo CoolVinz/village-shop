@@ -10,16 +10,24 @@ import { ArrowLeft, Edit, Package, Store, Calendar } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { formatCurrency } from '@/lib/utils'
+import { findProductBySlugOrId, getVendorShopUrl } from '@/lib/db-helpers'
 
-async function getProduct(productId: string, userId: string) {
+async function getProduct(productSlugOrId: string, userId: string) {
+  const foundProduct = await findProductBySlugOrId(productSlugOrId)
+  
+  if (!foundProduct) {
+    notFound()
+  }
+
   const product = await prisma.product.findUnique({
-    where: { id: productId },
+    where: { id: foundProduct.id },
     include: {
       shop: {
         select: {
           id: true,
           name: true,
           ownerId: true,
+          slug: true,
         }
       },
       _count: {
@@ -64,7 +72,7 @@ async function getProduct(productId: string, userId: string) {
   return product
 }
 
-async function ProductViewContent({ productId }: { productId: string }) {
+async function ProductViewContent({ productSlugOrId }: { productSlugOrId: string }) {
   // Get authentication token from cookies
   const cookieStore = await cookies()
   const token = cookieStore.get('auth-token')?.value
@@ -84,7 +92,7 @@ async function ProductViewContent({ productId }: { productId: string }) {
     redirect('/auth/login?error=insufficient_permissions')
   }
 
-  const product = await getProduct(productId, user.id)
+  const product = await getProduct(productSlugOrId, user.id)
 
   return (
     <div className="space-y-6">
@@ -203,7 +211,7 @@ async function ProductViewContent({ productId }: { productId: string }) {
                 <div className="flex items-center gap-2">
                   <Store className="h-4 w-4" />
                   <Link 
-                    href={`/vendor/shop/${product.shop.id}`}
+                    href={getVendorShopUrl(product.shop)}
                     className="text-blue-600 hover:underline"
                   >
                     {product.shop.name}
@@ -353,5 +361,5 @@ export default function VendorProductPage({
 
 async function ProductViewContentWrapper({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  return <ProductViewContent productId={id} />
+  return <ProductViewContent productSlugOrId={id} />
 }

@@ -86,7 +86,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       fetchProduct()
       fetchShops()
     }
-  }, [productId])
+  }, [productId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchProduct = async () => {
     try {

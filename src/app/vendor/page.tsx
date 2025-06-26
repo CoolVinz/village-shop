@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { 
@@ -258,12 +259,12 @@ export default async function VendorDashboard() {
                   <p className="text-sm text-gray-500 mb-2">
                     No shops yet
                   </p>
-                  <a 
+                  <Link 
                     href="/vendor/shop/create" 
                     className="text-sm text-blue-600 hover:text-blue-800"
                   >
                     Create your first shop
-                  </a>
+                  </Link>
                 </div>
               ) : (
                 stats.shops.map((shop) => (
