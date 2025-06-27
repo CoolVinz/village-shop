@@ -47,11 +47,20 @@ export async function POST(request: NextRequest) {
         )
       }
       
-      // Check business hours (9 AM - 6 PM)
-      const hour = deliveryDate.getHours()
+      // Check business hours (9 AM - 6 PM) in Thailand timezone (UTC+7)
+      const thailandOffset = 7 * 60 // Thailand is UTC+7
+      const thailandTime = new Date(deliveryDate.getTime() + (thailandOffset * 60 * 1000))
+      const hour = thailandTime.getUTCHours()
+      
+      console.log('🕐 Delivery time validation:', {
+        originalUTC: deliveryDate.toISOString(),
+        thailandTime: thailandTime.toISOString(),
+        hour: hour
+      })
+      
       if (hour < 9 || hour >= 18) {
         return NextResponse.json(
-          { error: 'Delivery time must be between 9 AM and 6 PM' },
+          { error: `Delivery time must be between 9 AM and 6 PM Thailand time. Selected time: ${hour}:${thailandTime.getUTCMinutes().toString().padStart(2, '0')}` },
           { status: 400 }
         )
       }

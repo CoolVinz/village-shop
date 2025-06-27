@@ -86,10 +86,10 @@ export default function CheckoutPage() {
         return
       }
       
-      // Check business hours (9 AM - 6 PM)
+      // Check business hours (9 AM - 6 PM) - using local time since datetime-local is local
       const hour = selectedTime.getHours()
       if (hour < 9 || hour >= 18) {
-        toast.error('Delivery time must be between 9 AM and 6 PM')
+        toast.error('Delivery time must be between 9 AM and 6 PM local time')
         return
       }
     }
