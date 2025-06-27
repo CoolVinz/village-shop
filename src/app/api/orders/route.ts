@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
-
-// AUTHENTICATION COMPLETELY DISABLED FOR DEVELOPMENT
-// import { getServerSession } from 'next-auth'
-// import { authOptions } from '@/lib/auth'
+import { cookies } from 'next/headers'
+import { verifyToken } from '@/lib/auth'
 
 const orderItemSchema = z.object({
   productId: z.string().min(1),
@@ -270,13 +268,82 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔍 Orders API GET called')
+    
+    // CRITICAL: Authentication required for all order access
+    const cookieStore = await cookies()
+    const token = cookieStore.get('auth-token')?.value
+    
+    if (!token) {
+      console.log('❌ No auth token found')
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      )
+    }
+
+    // Verify the token and get user info
+    const user = verifyToken(token)
+    if (!user) {
+      console.log('❌ Invalid auth token')
+      return NextResponse.json(
+        { error: 'Invalid authentication token' },
+        { status: 401 }
+      )
+    }
+
+    console.log('👤 Authenticated user:', { id: user.id, name: user.name, role: user.role })
+
     const { searchParams } = new URL(request.url)
     const customerId = searchParams.get('customerId')
     const houseNumber = searchParams.get('houseNumber')
 
+    // CRITICAL: Authorization checks based on user role and requested data
+    if (user.role === 'ADMIN') {
+      // Admins can access any orders
+      console.log('🔑 Admin access granted')
+    } else if (user.role === 'CUSTOMER') {
+      // Customers can only access their own orders
+      if (customerId && customerId !== user.id) {
+        console.log('❌ Customer trying to access other customer orders:', { userId: user.id, requestedCustomerId: customerId })
+        return NextResponse.json(
+          { error: 'Unauthorized: You can only access your own orders' },
+          { status: 403 }
+        )
+      }
+      
+      if (houseNumber && user.houseNumber !== houseNumber) {
+        console.log('❌ Customer trying to access different house number:', { userHouse: user.houseNumber, requestedHouse: houseNumber })
+        return NextResponse.json(
+          { error: 'Unauthorized: You can only access orders from your house number' },
+          { status: 403 }
+        )
+      }
+    } else if (user.role === 'VENDOR') {
+      // Vendors should use a different endpoint for their orders
+      return NextResponse.json(
+        { error: 'Vendors should use the vendor orders endpoint' },
+        { status: 403 }
+      )
+    } else {
+      return NextResponse.json(
+        { error: 'Unauthorized role' },
+        { status: 403 }
+      )
+    }
+
     let orders
 
     if (customerId) {
+      // For authenticated customers, double-check authorization
+      if (user.role === 'CUSTOMER' && customerId !== user.id) {
+        return NextResponse.json(
+          { error: 'Unauthorized: Customer ID mismatch' },
+          { status: 403 }
+        )
+      }
+      
+      console.log('📋 Fetching orders by customer ID:', customerId)
       orders = await prisma.order.findMany({
         where: { customerId },
         include: {
@@ -311,6 +378,15 @@ export async function GET(request: NextRequest) {
         }
       })
     } else if (houseNumber) {
+      // For house number queries, verify authorization
+      if (user.role === 'CUSTOMER' && user.houseNumber !== houseNumber) {
+        return NextResponse.json(
+          { error: 'Unauthorized: House number mismatch' },
+          { status: 403 }
+        )
+      }
+      
+      console.log('🏠 Fetching orders by house number:', houseNumber)
       orders = await prisma.order.findMany({
         where: { customerHouseNumber: houseNumber },
         include: {
@@ -345,7 +421,16 @@ export async function GET(request: NextRequest) {
         }
       })
     } else {
-      // Return all orders (for admin purposes)
+      // No parameters - only admins can see all orders
+      if (user.role !== 'ADMIN') {
+        console.log('❌ Non-admin trying to access all orders')
+        return NextResponse.json(
+          { error: 'Unauthorized: Only admins can view all orders' },
+          { status: 403 }
+        )
+      }
+      
+      console.log('👑 Admin fetching all orders')
       orders = await prisma.order.findMany({
         include: {
           customer: {
@@ -381,9 +466,10 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    console.log(`✅ Returning ${orders.length} orders to user ${user.id}`)
     return NextResponse.json(orders)
   } catch (error) {
-    console.error('Error fetching orders:', error)
+    console.error('❌ Error fetching orders:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
