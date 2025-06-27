@@ -152,7 +152,7 @@ export default function OrderItemCard({ orderItem }: OrderItemCardProps) {
               <div className="flex items-center gap-4 mt-1">
                 <span className="text-sm">Qty: {orderItem.quantity}</span>
                 <span className="font-medium">
-                  {formatCurrency(orderItem.price.toNumber() * orderItem.quantity)}
+                  {formatCurrency(Number(orderItem.price) * orderItem.quantity)}
                 </span>
               </div>
             </div>
