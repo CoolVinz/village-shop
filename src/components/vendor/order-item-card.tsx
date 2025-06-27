@@ -85,6 +85,8 @@ export default function OrderItemCard({ orderItem }: OrderItemCardProps) {
   const updateOrderStatus = async (newStatus: string) => {
     setIsUpdating(true)
     try {
+      console.log('🔄 Updating order status to:', newStatus)
+      
       const response = await fetch(
         `/api/orders/${orderItem.order.id}/items/${orderItem.id}`,
         {
@@ -94,17 +96,34 @@ export default function OrderItemCard({ orderItem }: OrderItemCardProps) {
         }
       )
 
+      console.log('📡 Response status:', response.status)
+
       if (!response.ok) {
-        throw new Error('Failed to update order status')
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        console.error('❌ API Error:', errorData)
+        
+        if (response.status === 401) {
+          toast.error('Authentication failed. Please log in again.')
+          router.push('/auth/login?redirect=/vendor/orders')
+          return
+        } else if (response.status === 403) {
+          toast.error('You do not have permission to update this order.')
+          return
+        } else {
+          throw new Error(errorData.error || 'Failed to update order status')
+        }
       }
 
       const updatedItem = await response.json()
+      console.log('✅ Order updated successfully:', updatedItem)
+      
       setCurrentStatus(updatedItem.status)
       toast.success(`Order status updated to ${newStatus.toLowerCase().replace('_', ' ')}`)
       router.refresh()
     } catch (error) {
       console.error('Error updating order status:', error)
-      toast.error('Failed to update order status')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update order status'
+      toast.error(errorMessage)
     } finally {
       setIsUpdating(false)
     }

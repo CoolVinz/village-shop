@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
-
-// AUTHENTICATION COMPLETELY DISABLED FOR DEVELOPMENT
-// import { getServerSession } from 'next-auth'
-// import { authOptions } from '@/lib/auth'
+import { verifyToken } from '@/lib/auth'
 
 const updateOrderItemSchema = z.object({
   status: z.enum(['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'DELIVERED', 'CANCELLED']),
@@ -19,19 +16,28 @@ export async function PATCH(
     const params = await context.params
     console.log('🔄 Updating order item status:', params)
     
-    // TEMPORARILY DISABLED AUTHENTICATION FOR DEVELOPMENT
-    // const session = await getServerSession(authOptions)
-    // if (!session) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    // }
+    // Get authentication token from cookies
+    const token = request.cookies.get('auth-token')?.value
+    console.log('🔑 Auth token present:', !!token)
+    
+    if (!token) {
+      console.log('❌ No auth token found')
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
 
-    // Mock session for development
-    const session = {
-      user: {
-        id: 'dev-user-1',
-        name: 'Development User',
-        role: 'VENDOR'
-      }
+    // Verify the token and get user info
+    const user = verifyToken(token)
+    if (!user) {
+      console.log('❌ Invalid auth token')
+      return NextResponse.json({ error: 'Invalid authentication token' }, { status: 401 })
+    }
+
+    console.log('👤 Authenticated user:', { id: user.id, name: user.name, role: user.role })
+
+    // Check if user has vendor role
+    if (user.role !== 'VENDOR' && user.role !== 'ADMIN') {
+      console.log('❌ Insufficient permissions:', user.role)
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
     const body = await request.json()
@@ -51,7 +57,14 @@ export async function PATCH(
       return NextResponse.json({ error: 'Order item not found' }, { status: 404 })
     }
 
-    if (orderItem.shop.ownerId !== session.user.id && session.user.role !== 'ADMIN') {
+    console.log('🔍 Checking ownership:', { 
+      shopOwnerId: orderItem.shop.ownerId, 
+      userId: user.id, 
+      userRole: user.role 
+    })
+
+    if (orderItem.shop.ownerId !== user.id && user.role !== 'ADMIN') {
+      console.log('❌ User does not own this shop')
       return NextResponse.json({ error: 'You do not own this shop' }, { status: 403 })
     }
 
@@ -109,6 +122,7 @@ export async function PATCH(
         where: { id: params.orderId },
         data: { status: 'CONFIRMED' }
       })
+      console.log('📋 Main order status updated to CONFIRMED')
     }
 
     console.log('✅ Order item status updated:', updatedOrderItem)
