@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Package, Search, Calendar, Store, Eye, AlertCircle } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { useAuth } from '@/hooks/useAuth'
 import Image from 'next/image'
 
 interface Order {
@@ -63,19 +64,30 @@ function getStatusColor(status: string) {
 }
 
 export default function OrdersPage() {
+  const { user } = useAuth()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(false)
   const [searchHouseNumber, setSearchHouseNumber] = useState('')
   const [hasSearched, setHasSearched] = useState(false)
+  const [autoLoaded, setAutoLoaded] = useState(false)
 
-  const fetchOrders = async (houseNumber: string) => {
-    if (!houseNumber.trim()) return
-
+  const fetchOrders = async (houseNumber?: string) => {
     setLoading(true)
     setHasSearched(true)
     
     try {
-      const response = await fetch(`/api/orders?houseNumber=${encodeURIComponent(houseNumber.trim())}`)
+      let url = '/api/orders'
+      if (user?.id && !houseNumber) {
+        // Authenticated user - fetch by customer ID
+        url = `/api/orders?customerId=${user.id}`
+      } else if (houseNumber?.trim()) {
+        // Manual search by house number
+        url = `/api/orders?houseNumber=${encodeURIComponent(houseNumber.trim())}`
+      } else {
+        return
+      }
+
+      const response = await fetch(url)
       if (response.ok) {
         const ordersData = await response.json()
         setOrders(ordersData)
@@ -91,10 +103,23 @@ export default function OrdersPage() {
     }
   }
 
+  const fetchOrdersByCustomerId = useCallback(async () => {
+    if (!user?.id) return
+    setAutoLoaded(true)
+    await fetchOrders()
+  }, [user?.id])
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     fetchOrders(searchHouseNumber)
   }
+
+  // Auto-load orders for authenticated customers
+  useEffect(() => {
+    if (user?.role === 'CUSTOMER' && !autoLoaded) {
+      fetchOrdersByCustomerId()
+    }
+  }, [user, autoLoaded, fetchOrdersByCustomerId])
 
   // Group orders by shop for better display
   const getOrderShops = (order: Order) => {
@@ -117,39 +142,79 @@ export default function OrdersPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Your Orders</h1>
-          <p className="text-gray-600">Track your orders from village shops</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            {user?.role === 'CUSTOMER' ? `Hello ${user.name}! Here are your orders` : 'Your Orders'}
+          </h1>
+          <p className="text-gray-600">
+            {user?.role === 'CUSTOMER' 
+              ? 'Track your orders from village shops' 
+              : 'Enter your house number to track your orders from village shops'
+            }
+          </p>
         </div>
 
-        {/* Search Form */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Search className="h-5 w-5" />
-              Find Your Orders
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSearch} className="space-y-4">
-              <div>
-                <Label htmlFor="houseNumber">House Number</Label>
-                <Input
-                  id="houseNumber"
-                  value={searchHouseNumber}
-                  onChange={(e) => setSearchHouseNumber(e.target.value)}
-                  placeholder="Enter your house number (e.g., 123)"
-                  required
-                />
-                <p className="text-sm text-gray-500 mt-1">
-                  Enter your house number to view all orders placed from your address
-                </p>
-              </div>
-              <Button type="submit" disabled={loading}>
-                {loading ? 'Searching...' : 'Search Orders'}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+        {/* Search Form - Show for non-authenticated users or as additional search option */}
+        {(!user || user.role !== 'CUSTOMER') && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Search className="h-5 w-5" />
+                Find Your Orders
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSearch} className="space-y-4">
+                <div>
+                  <Label htmlFor="houseNumber">House Number</Label>
+                  <Input
+                    id="houseNumber"
+                    value={searchHouseNumber}
+                    onChange={(e) => setSearchHouseNumber(e.target.value)}
+                    placeholder="Enter your house number (e.g., 123)"
+                    required
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Enter your house number to view all orders placed from your address
+                  </p>
+                </div>
+                <Button type="submit" disabled={loading}>
+                  {loading ? 'Searching...' : 'Search Orders'}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Alternative search for authenticated customers */}
+        {user?.role === 'CUSTOMER' && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Search className="h-5 w-5" />
+                Search by House Number
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSearch} className="space-y-4">
+                <div>
+                  <Label htmlFor="houseNumber">House Number (Optional)</Label>
+                  <Input
+                    id="houseNumber"
+                    value={searchHouseNumber}
+                    onChange={(e) => setSearchHouseNumber(e.target.value)}
+                    placeholder="Enter a different house number to search"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Search for orders from a different house number (optional)
+                  </p>
+                </div>
+                <Button type="submit" disabled={loading}>
+                  {loading ? 'Searching...' : 'Search by House Number'}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Orders List */}
         {loading ? (
@@ -171,9 +236,11 @@ export default function OrdersPage() {
                 No orders found
               </h3>
               <p className="text-gray-600 mb-6">
-                {searchHouseNumber 
-                  ? `No orders found for house number "${searchHouseNumber}"`
-                  : 'Try searching with your house number'
+                {user?.role === 'CUSTOMER' 
+                  ? "You haven't placed any orders yet"
+                  : searchHouseNumber 
+                    ? `No orders found for house number "${searchHouseNumber}"`
+                    : 'Try searching with your house number'
                 }
               </p>
               <Link href="/products">
@@ -186,7 +253,10 @@ export default function OrdersPage() {
         ) : hasSearched ? (
           <div className="space-y-6">
             <div className="text-sm text-gray-600">
-              Found {orders.length} order{orders.length !== 1 ? 's' : ''} for house #{searchHouseNumber}
+              {user?.role === 'CUSTOMER' && !searchHouseNumber
+                ? `You have ${orders.length} order${orders.length !== 1 ? 's' : ''}`
+                : `Found ${orders.length} order${orders.length !== 1 ? 's' : ''} for house #${searchHouseNumber}`
+              }
             </div>
 
             {orders.map((order) => {
@@ -298,7 +368,7 @@ export default function OrdersPage() {
               )
             })}
           </div>
-        ) : (
+        ) : !user || user.role !== 'CUSTOMER' ? (
           <Card>
             <CardContent className="text-center py-12">
               <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
@@ -310,7 +380,7 @@ export default function OrdersPage() {
               </p>
             </CardContent>
           </Card>
-        )}
+        ) : null}
       </div>
     </div>
   )

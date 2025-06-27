@@ -22,6 +22,10 @@ export function Navigation() {
     { name: 'Home', href: '/' },
     { name: 'Shops', href: '/shops' },
     { name: 'Products', href: '/products' },
+    ...(user?.role === 'CUSTOMER' 
+      ? [{ name: 'My Orders', href: '/orders' }] 
+      : []
+    ),
     ...(user?.role === 'VENDOR' || user?.role === 'ADMIN' 
       ? [{ name: 'Vendor Dashboard', href: '/vendor' }] 
       : []

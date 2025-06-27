@@ -68,27 +68,39 @@ async function getShopProducts(shopId: string) {
 }
 
 async function ShopProductsContent({ shopId }: { shopId: string }) {
+  console.log(`🔍 Shop Products Debug: Starting with shopId: ${shopId}`)
+  
   // Get authentication token from cookies
   const cookieStore = await cookies()
   const token = cookieStore.get('auth-token')?.value
+  console.log('🔑 Auth token present:', !!token)
 
   if (!token) {
+    console.log('❌ No auth token, redirecting to login')
     redirect('/auth/login?redirect=/vendor/shop')
   }
 
   // Verify the token and get user info
   const user = verifyToken(token)
   if (!user) {
+    console.log('❌ Invalid token, redirecting to login')
     redirect('/auth/login?redirect=/vendor/shop')
   }
 
+  console.log('👤 Authenticated user:', { id: user.id, name: user.name, role: user.role })
+
   // Check if user has vendor role
   if (user.role !== 'VENDOR' && user.role !== 'ADMIN') {
+    console.log('❌ Insufficient permissions:', user.role)
     redirect('/auth/login?error=insufficient_permissions')
   }
 
   // Get shop and verify ownership
+  console.log('🏪 Fetching shop data...')
   const shop = await getShop(shopId, user.id)
+  console.log('🏪 Shop fetched:', { id: shop.id, name: shop.name, ownerId: shop.ownerId })
+  
+  console.log('📦 Fetching products...')
   const products = await getShopProducts(shopId)
   
   // Debug information for development
