@@ -165,3 +165,106 @@ export async function GET(request: NextRequest) {
     )
   }
 }
+
+const verifyPaymentSlipSchema = z.object({
+  paymentSlipId: z.string().min(1),
+  status: z.enum(['VERIFIED', 'REJECTED']),
+  notes: z.string().optional().nullable()
+})
+
+export async function PATCH(request: NextRequest) {
+  try {
+    console.log('🔍 Payment slip verification API called')
+    
+    const body = await request.json()
+    console.log('📝 Received verification data:', body)
+    
+    const validatedData = verifyPaymentSlipSchema.parse(body)
+    console.log('✅ Validated verification data:', validatedData)
+
+    // Find the payment slip with order data
+    const paymentSlip = await prisma.paymentSlip.findUnique({
+      where: { id: validatedData.paymentSlipId },
+      include: {
+        order: {
+          include: {
+            customer: {
+              select: {
+                id: true,
+                name: true,
+                houseNumber: true
+              }
+            }
+          }
+        }
+      }
+    })
+
+    if (!paymentSlip) {
+      return NextResponse.json(
+        { error: 'Payment slip not found' },
+        { status: 404 }
+      )
+    }
+
+    if (paymentSlip.status !== 'PENDING') {
+      return NextResponse.json(
+        { error: 'Payment slip has already been processed' },
+        { status: 400 }
+      )
+    }
+
+    // Update payment slip status
+    const updatedPaymentSlip = await prisma.paymentSlip.update({
+      where: { id: validatedData.paymentSlipId },
+      data: {
+        status: validatedData.status,
+        notes: validatedData.notes,
+        updatedAt: new Date()
+      },
+      include: {
+        order: {
+          include: {
+            customer: {
+              select: {
+                id: true,
+                name: true,
+                houseNumber: true
+              }
+            }
+          }
+        }
+      }
+    })
+
+    // If payment is verified, update order status to CONFIRMED
+    if (validatedData.status === 'VERIFIED') {
+      await prisma.order.update({
+        where: { id: paymentSlip.orderId },
+        data: {
+          status: 'CONFIRMED',
+          updatedAt: new Date()
+        }
+      })
+      console.log('📋 Order status updated to CONFIRMED')
+    }
+
+    console.log('🎉 Payment slip verification completed:', updatedPaymentSlip)
+    return NextResponse.json(updatedPaymentSlip)
+  } catch (error) {
+    console.error('❌ Error verifying payment slip:', error)
+    
+    if (error instanceof z.ZodError) {
+      console.error('📋 Validation errors:', error.errors)
+      return NextResponse.json(
+        { error: 'Invalid input', details: error.errors },
+        { status: 400 }
+      )
+    }
+
+    return NextResponse.json(
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    )
+  }
+}

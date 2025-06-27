@@ -27,7 +27,7 @@ export default function AdminLayout({
     { name: 'Users', href: '/admin/users', icon: Users },
     { name: 'Shops', href: '/admin/shops', icon: Store },
     { name: 'Orders', href: '/admin/orders', icon: ShoppingCart },
-    { name: 'Payments', href: '/admin/payments', icon: CreditCard },
+    { name: 'Payment Verification', href: '/admin/payment-verification', icon: CreditCard },
     { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ]
