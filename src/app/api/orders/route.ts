@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
-import { cookies } from 'next/headers'
-import { verifyToken } from '@/lib/auth'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth-config'
 
 const orderItemSchema = z.object({
   productId: z.string().min(1),
@@ -12,10 +12,6 @@ const orderItemSchema = z.object({
 })
 
 const createOrderSchema = z.object({
-  customerId: z.string().optional().nullable(), // For authenticated users
-  customerName: z.string().min(1).max(100),
-  customerHouseNumber: z.string().min(1).max(10),
-  customerPhone: z.string().min(1).max(20),
   deliveryTime: z.string().datetime().optional().nullable(),
   notes: z.string().max(500).optional().nullable(),
   items: z.array(orderItemSchema).min(1),
@@ -26,11 +22,42 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🛒 Order placement API called')
     
+    // CRITICAL: Authentication required for all order creation
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      console.log('❌ No authenticated user found')
+      return NextResponse.json(
+        { error: 'Authentication required to place orders' },
+        { status: 401 }
+      )
+    }
+
+    // Verify user has completed profile setup
+    if (!session.user.profileComplete) {
+      console.log('❌ User profile incomplete')
+      return NextResponse.json(
+        { error: 'Please complete your profile before placing orders' },
+        { status: 400 }
+      )
+    }
+
+    // Only customers can place orders
+    if (session.user.role !== 'CUSTOMER') {
+      console.log('❌ Non-customer trying to place order:', session.user.role)
+      return NextResponse.json(
+        { error: 'Only customers can place orders' },
+        { status: 403 }
+      )
+    }
+
     const body = await request.json()
-    console.log('📝 Received order data:', body)
-    
     const validatedData = createOrderSchema.parse(body)
-    console.log('✅ Validated order data:', validatedData)
+    
+    console.log('✅ Authenticated order from user:', {
+      userId: session.user.id,
+      houseNumber: session.user.houseNumber,
+      itemCount: validatedData.items.length
+    })
 
     // Additional business logic validation for delivery time
     if (validatedData.deliveryTime) {
@@ -64,59 +91,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Handle customer user - prefer authenticated user if provided
-    let customer
-    
-    if (validatedData.customerId) {
-      // User is authenticated, use their ID
-      console.log('👤 Using authenticated customer:', validatedData.customerId)
-      customer = await prisma.user.findUnique({
-        where: { id: validatedData.customerId }
-      })
+    // Use authenticated customer - no more insecure user creation
+    const customer = await prisma.user.findUnique({
+      where: { id: session.user.id }
+    })
 
-      if (!customer) {
-        return NextResponse.json(
-          { error: 'Authenticated user not found' },
-          { status: 400 }
-        )
-      }
+    if (!customer) {
+      console.log('❌ Authenticated user not found in database')
+      return NextResponse.json(
+        { error: 'User account not found. Please log in again.' },
+        { status: 400 }
+      )
+    }
 
-      // Update customer info from form (in case user updated details)
-      customer = await prisma.user.update({
-        where: { id: customer.id },
-        data: {
-          name: validatedData.customerName,
-          houseNumber: validatedData.customerHouseNumber,
-          phone: validatedData.customerPhone
-        }
-      })
-    } else {
-      // No authenticated user, find or create by house number
-      customer = await prisma.user.findUnique({
-        where: { houseNumber: validatedData.customerHouseNumber }
-      })
-
-      if (!customer) {
-        console.log('👤 Creating new customer user')
-        customer = await prisma.user.create({
-          data: {
-            name: validatedData.customerName,
-            houseNumber: validatedData.customerHouseNumber,
-            phone: validatedData.customerPhone,
-            role: 'CUSTOMER'
-          }
-        })
-      } else {
-        // Update customer info if needed
-        console.log('👤 Updating existing customer info')
-        customer = await prisma.user.update({
-          where: { id: customer.id },
-          data: {
-            name: validatedData.customerName,
-            phone: validatedData.customerPhone
-          }
-        })
-      }
+    if (!customer.houseNumber) {
+      console.log('❌ Customer missing house number')
+      return NextResponse.json(
+        { error: 'House number required. Please update your profile.' },
+        { status: 400 }
+      )
     }
 
     // Validate products exist and have sufficient stock
@@ -163,7 +156,7 @@ export async function POST(request: NextRequest) {
       const order = await tx.order.create({
         data: {
           customerId: customer.id,
-          customerHouseNumber: validatedData.customerHouseNumber,
+          customerHouseNumber: customer.houseNumber,
           deliveryTime: validatedData.deliveryTime ? new Date(validatedData.deliveryTime) : null,
           totalAmount: validatedData.totalAmount,
           notes: validatedData.notes,
@@ -271,27 +264,16 @@ export async function GET(request: NextRequest) {
     console.log('🔍 Orders API GET called')
     
     // CRITICAL: Authentication required for all order access
-    const cookieStore = await cookies()
-    const token = cookieStore.get('auth-token')?.value
-    
-    if (!token) {
-      console.log('❌ No auth token found')
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      console.log('❌ No authenticated user found')
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       )
     }
 
-    // Verify the token and get user info
-    const user = verifyToken(token)
-    if (!user) {
-      console.log('❌ Invalid auth token')
-      return NextResponse.json(
-        { error: 'Invalid authentication token' },
-        { status: 401 }
-      )
-    }
-
+    const user = session.user
     console.log('👤 Authenticated user:', { id: user.id, name: user.name, role: user.role })
 
     const { searchParams } = new URL(request.url)

@@ -1,47 +1,58 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/hooks/useAuth'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { UserRole } from '@prisma/client'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { MapPin, Phone, User, CheckCircle } from 'lucide-react'
+import { useNextAuth } from '@/hooks/useNextAuth'
 
 export default function CompleteProfilePage() {
-  const { user } = useAuth()
+  const { data: session, status } = useSession()
+  const { completeProfile } = useNextAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
   
   const [formData, setFormData] = useState({
     houseNumber: '',
     phone: '',
-    address: '',
-    role: UserRole.CUSTOMER,
+    role: 'CUSTOMER' as 'CUSTOMER' | 'VENDOR',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    // Redirect if user is not logged in or profile is already complete
-    if (!user) {
+    if (status === 'loading') return
+    
+    // Redirect if user is not logged in
+    if (status === 'unauthenticated') {
       router.push('/auth/login')
       return
     }
-    if (user.profileComplete) {
-      router.push('/')
+    
+    // Redirect if profile is already complete
+    if (session?.user?.profileComplete) {
+      const callbackUrl = searchParams.get('callbackUrl') || '/'
+      router.push(callbackUrl)
       return
     }
-  }, [user, router])
+  }, [session, status, router, searchParams])
 
-  if (!user) {
-    return <div>Loading...</div>
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    )
   }
 
-  const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+  if (!session?.user) {
+    return null
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,101 +61,135 @@ export default function CompleteProfilePage() {
     setError('')
 
     try {
-      const response = await fetch('/api/auth/complete-profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+      if (!formData.houseNumber.trim()) {
+        throw new Error('House number is required')
+      }
+
+      await completeProfile({
+        houseNumber: formData.houseNumber.trim(),
+        phone: formData.phone.trim() || undefined,
+        role: formData.role,
       })
 
-      if (response.ok) {
-        router.push('/')
-      } else {
-        const data = await response.json()
-        setError(data.error || 'Profile completion failed')
-      }
-    } catch {
-      setError('Network error occurred')
+      // Redirect to original destination or home
+      const callbackUrl = searchParams.get('callbackUrl') || '/'
+      router.push(callbackUrl)
+    } catch (error) {
+      console.error('Profile completion error:', error)
+      setError(error instanceof Error ? error.message : 'Failed to complete profile')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <Avatar className="w-16 h-16">
-              <AvatarImage src={user.image} alt={user.name} />
-              <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+            <Avatar className="h-16 w-16">
+              <AvatarImage src={session.user.image || undefined} />
+              <AvatarFallback>
+                <User className="h-8 w-8" />
+              </AvatarFallback>
             </Avatar>
           </div>
-          <CardTitle className="text-2xl">Complete Your Profile</CardTitle>
-          <p className="text-gray-600">Welcome, {user.name}!</p>
-          <p className="text-sm text-gray-500">
-            Please provide your village information to complete your account setup.
+          <CardTitle className="text-2xl">Welcome to Village Shop!</CardTitle>
+          <p className="text-gray-600">
+            Hello {session.user.name}! Let&apos;s complete your profile to start shopping.
           </p>
         </CardHeader>
+        
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+                {error}
+              </div>
+            )}
+
             <div className="space-y-2">
-              <Label htmlFor="houseNumber">House Number *</Label>
+              <Label htmlFor="houseNumber" className="flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                House Number *
+              </Label>
               <Input
                 id="houseNumber"
                 type="text"
-                placeholder="e.g., 123/4"
+                placeholder="e.g., 123/4, A-15, etc."
                 value={formData.houseNumber}
-                onChange={(e) => handleChange('houseNumber', e.target.value)}
+                onChange={(e) => setFormData(prev => ({ ...prev, houseNumber: e.target.value }))}
                 required
+                autoFocus
+                className="text-lg"
               />
+              <p className="text-xs text-gray-500">
+                Your house number for deliveries in the village
+              </p>
             </div>
-            
+
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
+              <Label htmlFor="phone" className="flex items-center gap-2">
+                <Phone className="h-4 w-4" />
+                Phone Number (Optional)
+              </Label>
               <Input
                 id="phone"
                 type="tel"
-                placeholder="e.g., 081-234-5678"
+                placeholder="0xx-xxx-xxxx"
                 value={formData.phone}
-                onChange={(e) => handleChange('phone', e.target.value)}
+                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                className="text-lg"
               />
+              <p className="text-xs text-gray-500">
+                For order updates and delivery coordination
+              </p>
             </div>
-            
+
             <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Input
-                id="address"
-                type="text"
-                placeholder="Additional address details"
-                value={formData.address}
-                onChange={(e) => handleChange('address', e.target.value)}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="role">Role *</Label>
-              <Select value={formData.role} onValueChange={(value) => handleChange('role', value)}>
-                <SelectTrigger>
+              <Label htmlFor="role" className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Account Type
+              </Label>
+              <Select 
+                value={formData.role} 
+                onValueChange={(value: 'CUSTOMER' | 'VENDOR') => 
+                  setFormData(prev => ({ ...prev, role: value }))
+                }
+              >
+                <SelectTrigger className="text-lg">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={UserRole.CUSTOMER}>Customer - I want to buy products</SelectItem>
-                  <SelectItem value={UserRole.VENDOR}>Vendor - I want to sell products</SelectItem>
+                  <SelectItem value="CUSTOMER">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4" />
+                      Customer - I want to shop
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="VENDOR">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Vendor - I want to sell products
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            
-            {error && (
-              <div className="text-red-500 text-sm bg-red-50 p-3 rounded">{error}</div>
-            )}
-            
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Completing Profile...' : 'Complete Profile'}
+
+            <Button 
+              type="submit" 
+              className="w-full text-lg py-6"
+              disabled={loading || !formData.houseNumber.trim()}
+            >
+              {loading ? 'Completing Profile...' : 'Complete Profile & Start Shopping'}
             </Button>
           </form>
-          
-          <div className="mt-4 text-center text-xs text-gray-500">
-            This information helps us serve your village marketplace better.
+
+          <div className="mt-6 text-center">
+            <p className="text-xs text-gray-500">
+              By completing your profile, you agree to our terms of service and can start enjoying the village marketplace experience.
+            </p>
           </div>
         </CardContent>
       </Card>
