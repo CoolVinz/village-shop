@@ -89,6 +89,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
       setUser(null)
+      
+      // Clear cart data for security
+      const keys = Object.keys(localStorage)
+      keys.forEach(key => {
+        if (key.startsWith('village-cart-')) {
+          localStorage.removeItem(key)
+        }
+      })
+      // Clear old global cart key too
+      localStorage.removeItem('village-cart')
     } catch (error) {
       console.error('Logout failed:', error)
     }

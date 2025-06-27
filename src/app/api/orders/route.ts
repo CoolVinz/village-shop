@@ -14,6 +14,7 @@ const orderItemSchema = z.object({
 })
 
 const createOrderSchema = z.object({
+  customerId: z.string().optional().nullable(), // For authenticated users
   customerName: z.string().min(1).max(100),
   customerHouseNumber: z.string().min(1).max(10),
   customerPhone: z.string().min(1).max(20),
@@ -56,31 +57,59 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create or find customer user
-    let customer = await prisma.user.findUnique({
-      where: { houseNumber: validatedData.customerHouseNumber }
-    })
-
-    if (!customer) {
-      console.log('👤 Creating new customer user')
-      customer = await prisma.user.create({
-        data: {
-          name: validatedData.customerName,
-          houseNumber: validatedData.customerHouseNumber,
-          phone: validatedData.customerPhone,
-          role: 'CUSTOMER'
-        }
+    // Handle customer user - prefer authenticated user if provided
+    let customer
+    
+    if (validatedData.customerId) {
+      // User is authenticated, use their ID
+      console.log('👤 Using authenticated customer:', validatedData.customerId)
+      customer = await prisma.user.findUnique({
+        where: { id: validatedData.customerId }
       })
-    } else {
-      // Update customer info if needed
-      console.log('👤 Updating existing customer info')
+
+      if (!customer) {
+        return NextResponse.json(
+          { error: 'Authenticated user not found' },
+          { status: 400 }
+        )
+      }
+
+      // Update customer info from form (in case user updated details)
       customer = await prisma.user.update({
         where: { id: customer.id },
         data: {
           name: validatedData.customerName,
+          houseNumber: validatedData.customerHouseNumber,
           phone: validatedData.customerPhone
         }
       })
+    } else {
+      // No authenticated user, find or create by house number
+      customer = await prisma.user.findUnique({
+        where: { houseNumber: validatedData.customerHouseNumber }
+      })
+
+      if (!customer) {
+        console.log('👤 Creating new customer user')
+        customer = await prisma.user.create({
+          data: {
+            name: validatedData.customerName,
+            houseNumber: validatedData.customerHouseNumber,
+            phone: validatedData.customerPhone,
+            role: 'CUSTOMER'
+          }
+        })
+      } else {
+        // Update customer info if needed
+        console.log('👤 Updating existing customer info')
+        customer = await prisma.user.update({
+          where: { id: customer.id },
+          data: {
+            name: validatedData.customerName,
+            phone: validatedData.customerPhone
+          }
+        })
+      }
     }
 
     // Validate products exist and have sufficient stock

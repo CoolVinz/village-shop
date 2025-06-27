@@ -1,7 +1,9 @@
 'use client'
 
-import { createContext, useContext, useReducer, useEffect } from 'react'
+import { createContext, useContext, useReducer, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
+import { useAuth } from '@/hooks/useAuth'
+import { SessionUser } from '@/lib/auth'
 
 interface CartItem {
   id: string
@@ -42,6 +44,8 @@ const CartContext = createContext<{
   toggleCart: () => void
   openCart: () => void
   closeCart: () => void
+  currentUser: SessionUser | null
+  isAuthenticated: boolean
 } | null>(null)
 
 function cartReducer(state: CartState, action: CartAction): CartState {
@@ -146,28 +150,65 @@ function cartReducer(state: CartState, action: CartAction): CartState {
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
+  const { user, loading: authLoading } = useAuth()
   const [state, dispatch] = useReducer(cartReducer, {
     items: [],
     isOpen: false
   })
 
-  // Load cart from localStorage on mount
+  // Get user-specific cart storage key
+  const getCartStorageKey = useCallback(() => {
+    if (user?.id) {
+      return `village-cart-${user.id}`
+    }
+    return 'village-cart-anonymous'
+  }, [user?.id])
+
+  // Load cart from localStorage when user changes or on mount
   useEffect(() => {
-    const savedCart = localStorage.getItem('village-cart')
+    if (authLoading) return // Wait for auth to finish loading
+
+    const cartKey = getCartStorageKey()
+    const savedCart = localStorage.getItem(cartKey)
+    
     if (savedCart) {
       try {
         const cartItems = JSON.parse(savedCart)
         dispatch({ type: 'LOAD_CART', payload: cartItems })
       } catch (error) {
         console.error('Error loading cart from localStorage:', error)
+        // Clear corrupted cart data
+        localStorage.removeItem(cartKey)
+        dispatch({ type: 'CLEAR_CART' })
       }
+    } else {
+      // No saved cart for this user, start fresh
+      dispatch({ type: 'CLEAR_CART' })
     }
-  }, [])
+  }, [user?.id, authLoading, getCartStorageKey])
 
-  // Save cart to localStorage whenever items change
+  // Save cart to localStorage whenever items change (with user-specific key)
   useEffect(() => {
-    localStorage.setItem('village-cart', JSON.stringify(state.items))
-  }, [state.items])
+    if (authLoading) return // Don't save during auth loading
+
+    const cartKey = getCartStorageKey()
+    localStorage.setItem(cartKey, JSON.stringify(state.items))
+  }, [state.items, user?.id, authLoading, getCartStorageKey])
+
+  // Clear cart when user logs out
+  useEffect(() => {
+    if (!authLoading && !user) {
+      // User logged out, clear cart
+      dispatch({ type: 'CLEAR_CART' })
+      
+      // Clean up any anonymous cart data
+      const anonymousKey = 'village-cart-anonymous'
+      localStorage.removeItem(anonymousKey)
+      
+      // Also clean up old global cart key for migration
+      localStorage.removeItem('village-cart')
+    }
+  }, [user, authLoading])
 
   const addToCart = (item: Omit<CartItem, 'quantity'> & { quantity?: number }) => {
     dispatch({ type: 'ADD_ITEM', payload: item })
@@ -212,7 +253,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       getCartItemCount,
       toggleCart,
       openCart,
-      closeCart
+      closeCart,
+      currentUser: user,
+      isAuthenticated: !!user && !authLoading
     }}>
       {children}
     </CartContext.Provider>
