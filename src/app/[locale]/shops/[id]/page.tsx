@@ -20,6 +20,7 @@ async function getShop(id: string) {
           id: true,
           name: true,
           houseNumber: true,
+          isActive: true,
         }
       },
       products: {
@@ -47,7 +48,7 @@ export default async function ShopPage({ params }: ShopPageProps) {
   const { id } = await params
   const shop = await getShop(id)
 
-  if (!shop || !shop.isActive) {
+  if (!shop || !shop.isActive || !shop.owner.isActive) {
     notFound()
   }
 

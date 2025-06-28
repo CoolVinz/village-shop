@@ -27,7 +27,8 @@ import {
   Mail,
   Trash2,
   Shield,
-  Store
+  Store,
+  UserCheck
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { UserWithRelations } from '@/types/admin'
@@ -128,6 +129,38 @@ export function UserActionsMenu({ user, onUserUpdated }: UserActionsMenuProps) {
     }
   }
 
+  const handleActivateUser = async () => {
+    setIsLoading(true)
+    try {
+      const response = await fetch(`/api/admin/users/${user.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ isActive: true }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to activate user')
+      }
+
+      await response.json()
+      
+      if (user.role === 'VENDOR' && user.shops.length > 0) {
+        toast.success(`User activated successfully. ${user.shops.length} shop${user.shops.length > 1 ? 's' : ''} were also reactivated.`)
+      } else {
+        toast.success('User activated successfully')
+      }
+      
+      onUserUpdated()
+    } catch (error) {
+      console.error('Error activating user:', error)
+      toast.error('Failed to activate user')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <>
       <DropdownMenu>
@@ -141,6 +174,20 @@ export function UserActionsMenu({ user, onUserUpdated }: UserActionsMenuProps) {
             <Eye className="mr-2 h-4 w-4" />
             View Details
           </DropdownMenuItem>
+          
+          {/* User Activation/Deactivation */}
+          {!user.isActive && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleActivateUser}>
+                <UserCheck className="mr-2 h-4 w-4" />
+                Activate User
+                {user.role === 'VENDOR' && user.shops.length > 0 && (
+                  <span className="text-xs text-gray-500 ml-1">& Shops</span>
+                )}
+              </DropdownMenuItem>
+            </>
+          )}
           
           {user.role !== UserRole.ADMIN && (
             <>
@@ -196,6 +243,14 @@ export function UserActionsMenu({ user, onUserUpdated }: UserActionsMenuProps) {
             <AlertDialogDescription>
               Are you sure you want to deactivate {user.name}? This will set their account to inactive status. 
               They will not be able to log in until reactivated.
+              {user.role === 'VENDOR' && user.shops.length > 0 && (
+                <>
+                  <br /><br />
+                  <strong>Warning:</strong> This user owns {user.shops.length} shop{user.shops.length > 1 ? 's' : ''} 
+                  ({user.shops.map(shop => shop.name).join(', ')}). 
+                  All shops will also be deactivated and hidden from customers.
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -190,9 +190,14 @@ export async function GET(request: NextRequest) {
         })
       }
     } else {
-      // Get all active shops (customer view)
+      // Get all active shops with active owners (customer view)
       shops = await prisma.shop.findMany({
-        where: { isActive: true },
+        where: { 
+          isActive: true,
+          owner: {
+            isActive: true
+          }
+        },
         include: {
           owner: {
             select: {

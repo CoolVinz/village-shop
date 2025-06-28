@@ -105,28 +105,65 @@ export async function PATCH(
       }
     }
 
-    const updatedUser = await prisma.user.update({
-      where: { id },
-      data: validatedData,
-      include: {
-        shops: {
-          select: {
-            id: true,
-            name: true,
-            isActive: true,
-          }
-        },
-        orders: {
-          select: {
-            id: true,
-            totalAmount: true,
-            status: true
+    // Use transaction to ensure both user and shops are updated atomically
+    const result = await prisma.$transaction(async (tx) => {
+      // Update the user
+      const updatedUser = await tx.user.update({
+        where: { id },
+        data: validatedData,
+        include: {
+          shops: {
+            select: {
+              id: true,
+              name: true,
+              isActive: true,
+            }
+          },
+          orders: {
+            select: {
+              id: true,
+              totalAmount: true,
+              status: true
+            }
           }
         }
+      })
+
+      // Handle shop status when user status changes (for vendors)
+      if (updatedUser.role === UserRole.VENDOR && 'isActive' in validatedData) {
+        await tx.shop.updateMany({
+          where: { ownerId: id },
+          data: { isActive: validatedData.isActive }
+        })
+        
+        // Refresh user data to include updated shop status
+        const userWithUpdatedShops = await tx.user.findUnique({
+          where: { id },
+          include: {
+            shops: {
+              select: {
+                id: true,
+                name: true,
+                isActive: true,
+              }
+            },
+            orders: {
+              select: {
+                id: true,
+                totalAmount: true,
+                status: true
+              }
+            }
+          }
+        })
+        
+        return userWithUpdatedShops
       }
+
+      return updatedUser
     })
 
-    return NextResponse.json(updatedUser)
+    return NextResponse.json(result)
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.errors }, { status: 400 })
@@ -161,13 +198,32 @@ export async function DELETE(
       return NextResponse.json({ error: 'Cannot delete admin users' }, { status: 400 })
     }
 
-    // Soft delete by deactivating the user
-    const deactivatedUser = await prisma.user.update({
-      where: { id },
-      data: { isActive: false }
+    // Use transaction to ensure both user and shops are deactivated atomically
+    const result = await prisma.$transaction(async (tx) => {
+      // Soft delete by deactivating the user
+      const deactivatedUser = await tx.user.update({
+        where: { id },
+        data: { isActive: false }
+      })
+
+      // If the user is a vendor, also deactivate their shops
+      if (existingUser.role === UserRole.VENDOR) {
+        const shopsUpdated = await tx.shop.updateMany({
+          where: { ownerId: id },
+          data: { isActive: false }
+        })
+        
+        console.log(`Deactivated ${shopsUpdated.count} shops for user ${id}`)
+      }
+
+      return deactivatedUser
     })
 
-    return NextResponse.json({ message: 'User deactivated successfully', user: deactivatedUser })
+    return NextResponse.json({ 
+      message: 'User deactivated successfully', 
+      user: result,
+      shopsDeactivated: existingUser.role === UserRole.VENDOR ? 'All user shops have been deactivated' : 'No shops to deactivate'
+    })
   } catch (error) {
     console.error('Error deleting user:', error)
     return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 })

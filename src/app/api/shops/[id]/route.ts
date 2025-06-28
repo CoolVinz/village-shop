@@ -25,6 +25,7 @@ export async function GET(
             id: true,
             name: true,
             houseNumber: true,
+            isActive: true,
           }
         },
         products: {
@@ -43,6 +44,11 @@ export async function GET(
 
     if (!shop) {
       return NextResponse.json({ error: 'Shop not found' }, { status: 404 })
+    }
+
+    // Check if shop or owner is inactive for public access
+    if (!shop.isActive || !shop.owner.isActive) {
+      return NextResponse.json({ error: 'Shop not available' }, { status: 404 })
     }
 
     return NextResponse.json(shop)
