@@ -100,87 +100,8 @@ export async function authenticateUser(username: string, password: string): Prom
   }
 }
 
-// LINE OAuth helper functions
-export interface LineProfile {
-  userId: string
-  displayName: string
-  pictureUrl?: string
-  statusMessage?: string
-}
-
-export async function getLineProfile(accessToken: string): Promise<LineProfile | null> {
-  try {
-    const response = await fetch('https://api.line.me/v2/profile', {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-      },
-    })
-
-    if (!response.ok) {
-      return null
-    }
-
-    return await response.json()
-  } catch (error) {
-    console.error('LINE profile fetch error:', error)
-    return null
-  }
-}
-
-export async function findOrCreateLineUser(lineProfile: LineProfile): Promise<SessionUser | null> {
-  try {
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { lineId: lineProfile.userId }
-    })
-
-    if (existingUser) {
-      return {
-        id: existingUser.id,
-        name: existingUser.name,
-        username: existingUser.username || undefined,
-        houseNumber: existingUser.houseNumber || undefined,
-        role: existingUser.role,
-        phone: existingUser.phone || undefined,
-        address: existingUser.address || undefined,
-        lineId: existingUser.lineId || undefined,
-        email: existingUser.email || undefined,
-        image: existingUser.image || undefined,
-        profileComplete: existingUser.profileComplete,
-      }
-    }
-
-    // Create new user with LINE profile
-    const newUser = await prisma.user.create({
-      data: {
-        name: lineProfile.displayName,
-        lineId: lineProfile.userId,
-        image: lineProfile.pictureUrl,
-        email: `${lineProfile.userId}@line.me`,
-        role: UserRole.CUSTOMER,
-        profileComplete: false, // User needs to complete profile
-        isActive: true,
-      },
-    })
-
-    return {
-      id: newUser.id,
-      name: newUser.name,
-      username: newUser.username || undefined,
-      houseNumber: newUser.houseNumber || undefined,
-      role: newUser.role,
-      phone: newUser.phone || undefined,
-      address: newUser.address || undefined,
-      lineId: newUser.lineId || undefined,
-      email: newUser.email || undefined,
-      image: newUser.image || undefined,
-      profileComplete: newUser.profileComplete,
-    }
-  } catch (error) {
-    console.error('LINE user creation error:', error)
-    return null
-  }
-}
+// NOTE: LINE OAuth integration now handled by NextAuth.js
+// Legacy LINE functions removed to avoid conflicts with NextAuth.js LINE provider
 
 export async function createUser(userData: {
   name: string
