@@ -1,17 +1,20 @@
-// TEMPORARILY DISABLED AUTHENTICATION FOR DEVELOPMENT
-// import { withAuth } from 'next-auth/middleware'
-// import { NextResponse } from 'next/server'
-// import { UserRole } from '@prisma/client'
+import createMiddleware from 'next-intl/middleware';
 
-// Disabled middleware - allows access to all routes
-export default function middleware() {
-  // Allow all requests to pass through
-  return undefined
-}
+export default createMiddleware({
+  // A list of all locales that are supported
+  locales: ['en', 'th'],
+  
+  // Used when no locale matches
+  defaultLocale: 'th', // Default to Thai for Thai users
+  
+  // Use cookie for locale persistence
+  localeDetection: true,
+  
+  // Prefix for locale in URL
+  localePrefix: 'as-needed' // Only add prefix for non-default locale
+});
 
-// Comment out matcher to disable middleware completely
-// export const config = {
-//   matcher: [
-//     '/((?!api|_next/static|_next/image|favicon.ico).*)',
-//   ],
-// }
+export const config = {
+  // Match only internationalized pathnames, exclude API routes
+  matcher: ['/', '/(th|en)/:path*', '/((?!api|_next|_vercel|.*\\..*).*)']
+};

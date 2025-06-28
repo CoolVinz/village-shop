@@ -2,8 +2,10 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { CartSidebar } from '@/components/cart/cart-sidebar'
+import { LanguageToggle } from '@/components/ui/language-toggle'
 import { 
   Menu, 
   X,
@@ -17,21 +19,23 @@ import { useAuth } from '@/hooks/useAuth'
 export function Navigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const { user, logout } = useAuth()
+  const t = useTranslations('navigation')
+  const tAuth = useTranslations('auth')
 
   const navigation = [
-    { name: 'Home', href: '/' },
-    { name: 'Shops', href: '/shops' },
-    { name: 'Products', href: '/products' },
+    { name: t('home'), href: '/' },
+    { name: t('shops'), href: '/shops' },
+    { name: t('products'), href: '/products' },
     ...(user?.role === 'CUSTOMER' 
-      ? [{ name: 'My Orders', href: '/orders' }] 
+      ? [{ name: t('orders'), href: '/orders' }] 
       : []
     ),
     ...(user?.role === 'VENDOR' || user?.role === 'ADMIN' 
-      ? [{ name: 'Vendor Dashboard', href: '/vendor' }] 
+      ? [{ name: t('dashboard'), href: '/vendor' }] 
       : []
     ),
     ...(user?.role === 'ADMIN' 
-      ? [{ name: 'Admin Panel', href: '/admin' }] 
+      ? [{ name: t('admin'), href: '/admin' }] 
       : []
     ),
   ]
@@ -48,8 +52,8 @@ export function Navigation() {
           {/* Logo and main navigation */}
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
-              <Link href="/" className="text-xl font-bold text-gray-900">
-                Village Shop
+              <Link href="/" className="text-xl font-bold text-gray-900 thai-text">
+                ร้านค้าชาวบ้าน
               </Link>
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
@@ -65,8 +69,11 @@ export function Navigation() {
             </div>
           </div>
 
-          {/* Right side - Cart, Authentication */}
+          {/* Right side - Language, Cart, Authentication */}
           <div className="hidden sm:ml-6 sm:flex sm:items-center sm:space-x-4">
+            {/* Language Toggle */}
+            <LanguageToggle />
+            
             {/* Shopping Cart */}
             <CartSidebar />
 
@@ -75,7 +82,7 @@ export function Navigation() {
               <Link href="/auth/login">
                 <Button variant="outline" size="sm">
                   <LogIn className="h-4 w-4 mr-2" />
-                  Sign In
+                  {tAuth('login')}
                 </Button>
               </Link>
             )}
@@ -97,7 +104,7 @@ export function Navigation() {
                 {/* Sign Out */}
                 <Button variant="ghost" size="sm" onClick={handleSignOut}>
                   <LogOut className="h-4 w-4 mr-2" />
-                  Sign Out
+                  {tAuth('signOut')}
                 </Button>
               </div>
             )}
@@ -139,12 +146,15 @@ export function Navigation() {
             <div className="flex items-center px-4 space-x-3">
               <CartSidebar />
               
+              {/* Language Toggle */}
+              <LanguageToggle />
+              
               {/* Mobile Authentication */}
               {!user && (
                 <Link href="/auth/login" onClick={() => setIsMobileMenuOpen(false)}>
                   <Button variant="outline" size="sm">
                     <LogIn className="h-4 w-4 mr-2" />
-                    Sign In
+                    {tAuth('login')}
                   </Button>
                 </Link>
               )}
@@ -172,7 +182,7 @@ export function Navigation() {
                   className="w-full justify-start"
                 >
                   <LogOut className="h-4 w-4 mr-2" />
-                  Sign Out
+                  {tAuth('signOut')}
                 </Button>
               </div>
             )}
