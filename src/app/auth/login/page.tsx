@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
@@ -14,7 +14,7 @@ import Link from 'next/link'
 import { useAuth } from '@/hooks/useAuth'
 import { useNextAuth } from '@/hooks/useNextAuth'
 
-export default function LoginPage() {
+function LoginPageContent() {
   const { user, loading: authLoading, authenticated } = useNextAuth()
   const { login } = useAuth() // Keep for backward compatibility
   const router = useRouter()
@@ -211,5 +211,17 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    }>
+      <LoginPageContent />
+    </Suspense>
   )
 }

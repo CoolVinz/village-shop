@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { MapPin, Phone, User, CheckCircle } from 'lucide-react'
 import { useNextAuth } from '@/hooks/useNextAuth'
 
-export default function CompleteProfilePage() {
+function CompleteProfilePageContent() {
   const { user, loading: authLoading, unauthenticated, completeProfile } = useNextAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -192,5 +192,17 @@ export default function CompleteProfilePage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function CompleteProfilePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    }>
+      <CompleteProfilePageContent />
+    </Suspense>
   )
 }
