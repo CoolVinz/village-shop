@@ -1,8 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
+import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth-config'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+
+interface AuthSession {
+  user: {
+    id: string
+    name?: string | null
+    email?: string | null
+    role: 'CUSTOMER' | 'VENDOR' | 'ADMIN'
+    houseNumber?: string | null
+    profileComplete: boolean
+  }
+}
 
 const completeProfileSchema = z.object({
   houseNumber: z.string().min(1, 'House number is required').max(10, 'House number too long'),
@@ -15,7 +26,7 @@ export async function POST(request: NextRequest) {
     console.log('📝 Profile completion API called')
     
     // Check authentication
-    const session = await getServerSession(authOptions)
+    const session = await getServerSession(authOptions) as AuthSession | null
     if (!session?.user?.id) {
       console.log('❌ No authenticated user found')
       return NextResponse.json(

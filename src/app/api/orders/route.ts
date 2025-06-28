@@ -1,8 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
-import { getServerSession } from 'next-auth'
+import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth-config'
+
+interface AuthSession {
+  user: {
+    id: string
+    name?: string | null
+    email?: string | null
+    role: 'CUSTOMER' | 'VENDOR' | 'ADMIN'
+    houseNumber?: string | null
+    profileComplete: boolean
+  }
+}
 
 const orderItemSchema = z.object({
   productId: z.string().min(1),
@@ -23,7 +34,7 @@ export async function POST(request: NextRequest) {
     console.log('🛒 Order placement API called')
     
     // CRITICAL: Authentication required for all order creation
-    const session = await getServerSession(authOptions)
+    const session = await getServerSession(authOptions) as AuthSession | null
     if (!session?.user?.id) {
       console.log('❌ No authenticated user found')
       return NextResponse.json(
@@ -156,7 +167,7 @@ export async function POST(request: NextRequest) {
       const order = await tx.order.create({
         data: {
           customerId: customer.id,
-          customerHouseNumber: customer.houseNumber,
+          customerHouseNumber: customer.houseNumber!,
           deliveryTime: validatedData.deliveryTime ? new Date(validatedData.deliveryTime) : null,
           totalAmount: validatedData.totalAmount,
           notes: validatedData.notes,
@@ -264,7 +275,7 @@ export async function GET(request: NextRequest) {
     console.log('🔍 Orders API GET called')
     
     // CRITICAL: Authentication required for all order access
-    const session = await getServerSession(authOptions)
+    const session = await getServerSession(authOptions) as AuthSession | null
     if (!session?.user?.id) {
       console.log('❌ No authenticated user found')
       return NextResponse.json(

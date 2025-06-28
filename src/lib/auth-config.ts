@@ -1,9 +1,8 @@
-import type { NextAuthOptions } from 'next-auth'
 import LineProvider from 'next-auth/providers/line'
 import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import { prisma } from '@/lib/prisma'
 
-export const authOptions: NextAuthOptions = {
+export const authOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
     LineProvider({
@@ -17,7 +16,7 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async signIn({ user, account }) {
+    async signIn({ user, account }: any) {
       console.log('🔑 LINE Login attempt:', { 
         userId: user.id, 
         email: user.email, 
@@ -65,7 +64,7 @@ export const authOptions: NextAuthOptions = {
       return true
     },
     
-    async session({ session, user }) {
+    async session({ session, user }: any) {
       if (session.user) {
         // Fetch complete user data from database
         const dbUser = await prisma.user.findUnique({
@@ -99,7 +98,7 @@ export const authOptions: NextAuthOptions = {
       return session
     },
     
-    async jwt({ token, user }) {
+    async jwt({ token, user }: any) {
       if (user) {
         token.role = user.role
         token.houseNumber = user.houseNumber
@@ -116,7 +115,7 @@ export const authOptions: NextAuthOptions = {
   },
   
   events: {
-    async signIn({ user, account, isNewUser }) {
+    async signIn({ user, account, isNewUser }: any) {
       console.log('📝 User signed in:', {
         userId: user.id,
         email: user.email,
@@ -124,7 +123,7 @@ export const authOptions: NextAuthOptions = {
         isNewUser,
       })
     },
-    async createUser({ user }) {
+    async createUser({ user }: any) {
       console.log('👤 New user created:', {
         userId: user.id,
         email: user.email,
@@ -133,7 +132,7 @@ export const authOptions: NextAuthOptions = {
   },
   
   session: {
-    strategy: 'database',
+    strategy: 'database' as const,
     maxAge: 7 * 24 * 60 * 60, // 7 days
   },
   

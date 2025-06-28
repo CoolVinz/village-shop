@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useSession, signIn } from 'next-auth/react'
+import { signIn } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,9 +12,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { LogIn, Smartphone, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import { useAuth } from '@/hooks/useAuth'
+import { useNextAuth } from '@/hooks/useNextAuth'
 
 export default function LoginPage() {
-  const { data: session, status } = useSession()
+  const { user, loading: authLoading, authenticated } = useNextAuth()
   const { login } = useAuth() // Keep for backward compatibility
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -29,14 +30,14 @@ export default function LoginPage() {
   const errorParam = searchParams.get('error')
 
   useEffect(() => {
-    if (status === 'authenticated' && session?.user) {
-      if (session.user.profileComplete) {
+    if (authenticated && user) {
+      if (user.profileComplete) {
         router.push(redirect)
       } else {
         router.push(`/auth/complete-profile?callbackUrl=${encodeURIComponent(redirect)}`)
       }
     }
-  }, [session, status, router, redirect])
+  }, [user, authenticated, router, redirect])
 
   useEffect(() => {
     if (errorParam) {
@@ -59,7 +60,7 @@ export default function LoginPage() {
     
     try {
       await signIn('line', {
-        callbackUrl: session?.user?.profileComplete ? redirect : `/auth/complete-profile?callbackUrl=${encodeURIComponent(redirect)}`,
+        callbackUrl: user?.profileComplete ? redirect : `/auth/complete-profile?callbackUrl=${encodeURIComponent(redirect)}`,
         redirect: true,
       })
     } catch (error) {
@@ -88,7 +89,7 @@ export default function LoginPage() {
     }
   }
 
-  if (status === 'loading') {
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>

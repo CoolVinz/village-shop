@@ -3,8 +3,25 @@
 import { useSession, signIn, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 
+interface ExtendedUser {
+  id: string
+  name?: string | null
+  email?: string | null
+  image?: string | null
+  role: 'CUSTOMER' | 'VENDOR' | 'ADMIN'
+  houseNumber?: string | null
+  phone?: string | null
+  profileComplete: boolean
+  lineId?: string | null
+}
+
+interface ExtendedSession {
+  user: ExtendedUser
+}
+
 export function useNextAuth() {
-  const { data: session, status } = useSession()
+  const { data: rawSession, status } = useSession()
+  const session = rawSession as ExtendedSession | null
   const router = useRouter()
 
   const loginWithLine = async () => {

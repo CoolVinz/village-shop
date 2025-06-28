@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,8 +12,7 @@ import { MapPin, Phone, User, CheckCircle } from 'lucide-react'
 import { useNextAuth } from '@/hooks/useNextAuth'
 
 export default function CompleteProfilePage() {
-  const { data: session, status } = useSession()
-  const { completeProfile } = useNextAuth()
+  const { user, loading: authLoading, unauthenticated, completeProfile } = useNextAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
   
@@ -27,23 +25,23 @@ export default function CompleteProfilePage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    if (status === 'loading') return
+    if (authLoading) return
     
     // Redirect if user is not logged in
-    if (status === 'unauthenticated') {
+    if (unauthenticated) {
       router.push('/auth/login')
       return
     }
     
     // Redirect if profile is already complete
-    if (session?.user?.profileComplete) {
+    if (user?.profileComplete) {
       const callbackUrl = searchParams.get('callbackUrl') || '/'
       router.push(callbackUrl)
       return
     }
-  }, [session, status, router, searchParams])
+  }, [user, authLoading, unauthenticated, router, searchParams])
 
-  if (status === 'loading') {
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
@@ -51,7 +49,7 @@ export default function CompleteProfilePage() {
     )
   }
 
-  if (!session?.user) {
+  if (!user) {
     return null
   }
 
@@ -88,7 +86,7 @@ export default function CompleteProfilePage() {
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
             <Avatar className="h-16 w-16">
-              <AvatarImage src={session.user.image || undefined} />
+              <AvatarImage src={user.image || undefined} />
               <AvatarFallback>
                 <User className="h-8 w-8" />
               </AvatarFallback>
@@ -96,7 +94,7 @@ export default function CompleteProfilePage() {
           </div>
           <CardTitle className="text-2xl">Welcome to Village Shop!</CardTitle>
           <p className="text-gray-600">
-            Hello {session.user.name}! Let&apos;s complete your profile to start shopping.
+            Hello {user.name}! Let&apos;s complete your profile to start shopping.
           </p>
         </CardHeader>
         
