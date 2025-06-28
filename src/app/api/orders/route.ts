@@ -128,7 +128,17 @@ export async function POST(request: NextRequest) {
     for (const item of validatedData.items) {
       const product = await prisma.product.findUnique({
         where: { id: item.productId },
-        include: { shop: true }
+        include: { 
+          shop: {
+            include: {
+              owner: {
+                select: {
+                  isActive: true
+                }
+              }
+            }
+          }
+        }
       })
 
       if (!product) {
@@ -138,7 +148,7 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      if (!product.isAvailable || !product.shop.isActive) {
+      if (!product.isAvailable || !product.shop.isActive || !product.shop.owner.isActive) {
         return NextResponse.json(
           { error: `Product "${product.name}" is not available` },
           { status: 400 }

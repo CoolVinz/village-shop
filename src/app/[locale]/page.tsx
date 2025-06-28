@@ -13,6 +13,9 @@ async function getFeaturedShops() {
     return await prisma.shop.findMany({
       where: { 
         isActive: true,
+        owner: {
+          isActive: true
+        },
         products: {
           some: {
             isAvailable: true,
@@ -72,7 +75,10 @@ async function getFeaturedProducts() {
           gt: 0
         },
         shop: {
-          isActive: true
+          isActive: true,
+          owner: {
+            isActive: true
+          }
         }
       },
       include: {

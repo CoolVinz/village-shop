@@ -30,6 +30,7 @@ async function getProduct(slugOrId: string) {
               id: true,
               name: true,
               houseNumber: true,
+              isActive: true,
             }
           },
           products: {
@@ -62,7 +63,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const { id } = await params
   const product = await getProduct(id)
 
-  if (!product || !product.isAvailable || !product.shop.isActive) {
+  if (!product || !product.isAvailable || !product.shop.isActive || !product.shop.owner.isActive) {
     notFound()
   }
 

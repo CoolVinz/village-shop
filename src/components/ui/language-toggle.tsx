@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter, usePathname } from '@/i18n/routing'
 import { useLocale } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import {
@@ -17,26 +17,8 @@ export function LanguageToggle() {
   const locale = useLocale()
 
   const handleLanguageChange = (newLocale: string) => {
-    // For [locale] structure, we need to replace the locale in the path
-    const segments = pathname.split('/').filter(Boolean)
-    
-    if (newLocale === 'th') {
-      // For Thai (default), remove locale prefix
-      if (segments[0] === 'th' || segments[0] === 'en') {
-        segments.shift() // Remove current locale
-      }
-      const newPath = '/' + segments.join('/')
-      router.push(newPath || '/')
-    } else {
-      // For English, ensure it has /en prefix
-      if (segments[0] === 'th' || segments[0] === 'en') {
-        segments[0] = newLocale // Replace current locale
-      } else {
-        segments.unshift(newLocale) // Add locale prefix
-      }
-      const newPath = '/' + segments.join('/')
-      router.push(newPath)
-    }
+    // Use next-intl router which handles locale switching automatically
+    router.replace(pathname, { locale: newLocale as 'th' | 'en' })
   }
 
   return (

@@ -131,6 +131,13 @@ export async function GET(request: NextRequest) {
       whereClause.stock = {
         gt: 0
       }
+      // Only show products from active shops with active owners
+      whereClause.shop = {
+        isActive: true,
+        owner: {
+          isActive: true
+        }
+      }
     }
 
     const products = await prisma.product.findMany({
@@ -141,11 +148,13 @@ export async function GET(request: NextRequest) {
             id: true,
             name: true,
             houseNumber: true,
+            isActive: true,
             owner: {
               select: {
                 id: true,
                 name: true,
                 houseNumber: true,
+                isActive: true,
               }
             }
           }

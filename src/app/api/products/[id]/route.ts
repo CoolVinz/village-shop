@@ -37,6 +37,14 @@ export async function GET(
             id: true,
             name: true,
             ownerId: true,
+            isActive: true,
+            owner: {
+              select: {
+                id: true,
+                name: true,
+                isActive: true,
+              }
+            }
           }
         },
         _count: {
@@ -55,6 +63,12 @@ export async function GET(
     if (!product) {
       console.log('❌ API: Product not found in database')
       return NextResponse.json({ error: 'Product not found' }, { status: 404 })
+    }
+
+    // Check if product, shop, or owner is inactive (for public access)
+    if (!product.isAvailable || !product.shop.isActive || !product.shop.owner.isActive) {
+      console.log('❌ API: Product/shop/owner inactive')
+      return NextResponse.json({ error: 'Product not available' }, { status: 404 })
     }
 
     return NextResponse.json(product)
