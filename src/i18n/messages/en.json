@@ -47,6 +47,7 @@
   },
   "auth": {
     "welcome": "Welcome to Villager Shop",
+    "login": "Login",
     "loginWithLine": "Continue with LINE",
     "loginDescription": "Sign in to access your village marketplace",
     "completeProfile": "Complete Your Profile",

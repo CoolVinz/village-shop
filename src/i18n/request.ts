@@ -12,6 +12,22 @@ export default getRequestConfig(async ({ requestLocale }) => {
 
   return {
     locale,
-    messages: (await import(`./messages/${locale}.json`)).default
+    messages: (await import(`./messages/${locale}.json`)).default,
+    onError(error) {
+      // Log missing messages in development, suppress in production
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Missing translation:', error.message);
+      }
+    },
+    getMessageFallback({ namespace, key }: { namespace?: string; key: string }) {
+      const path = [namespace, key].filter((part) => part != null).join('.');
+      
+      // In production, return the key path as fallback
+      if (process.env.NODE_ENV === 'production') {
+        return path;
+      }
+      // In development, make it obvious what's missing
+      return `[Missing: ${path}]`;
+    }
   };
 });

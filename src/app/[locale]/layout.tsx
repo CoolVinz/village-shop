@@ -4,6 +4,17 @@ import { routing } from '@/i18n/routing';
 import { Providers } from '@/components/providers'
 import { Navigation } from '@/components/ui/navigation'
 
+function onError(error: { message: string }) {
+  if (process.env.NODE_ENV === 'development') {
+    console.error('Client i18n error:', error.message);
+  }
+}
+
+function getMessageFallback({ namespace, key }: { namespace?: string; key: string }) {
+  const path = [namespace, key].filter((part) => part != null).join('.');
+  return process.env.NODE_ENV === 'production' ? path : `[Missing: ${path}]`;
+}
+
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
@@ -38,7 +49,11 @@ export default async function LocaleLayout({
   const messages = await getMessages();
 
   return (
-    <NextIntlClientProvider messages={messages}>
+    <NextIntlClientProvider 
+      messages={messages}
+      onError={onError}
+      getMessageFallback={getMessageFallback}
+    >
       <Providers>
         <Navigation />
         <main>{children}</main>
