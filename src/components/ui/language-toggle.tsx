@@ -17,32 +17,26 @@ export function LanguageToggle() {
   const locale = useLocale()
 
   const handleLanguageChange = (newLocale: string) => {
-    // Remove current locale from pathname if it exists
+    // For [locale] structure, we need to replace the locale in the path
     const segments = pathname.split('/').filter(Boolean)
-    const hasLocaleInPath = segments[0] === 'th' || segments[0] === 'en'
     
-    let newPathname = pathname
-    if (hasLocaleInPath) {
-      // Replace current locale with new one
-      segments[0] = newLocale
-      newPathname = '/' + segments.join('/')
-    } else {
-      // Add locale to path if not default
-      if (newLocale !== 'th') {
-        newPathname = '/' + newLocale + pathname
-      }
-    }
-    
-    // Handle default locale (Thai)
     if (newLocale === 'th') {
-      // Remove locale prefix for default locale
-      if (hasLocaleInPath && segments[0] === 'th') {
-        segments.shift()
-        newPathname = '/' + segments.join('/')
+      // For Thai (default), remove locale prefix
+      if (segments[0] === 'th' || segments[0] === 'en') {
+        segments.shift() // Remove current locale
       }
+      const newPath = '/' + segments.join('/')
+      router.push(newPath || '/')
+    } else {
+      // For English, ensure it has /en prefix
+      if (segments[0] === 'th' || segments[0] === 'en') {
+        segments[0] = newLocale // Replace current locale
+      } else {
+        segments.unshift(newLocale) // Add locale prefix
+      }
+      const newPath = '/' + segments.join('/')
+      router.push(newPath)
     }
-    
-    router.push(newPathname)
   }
 
   return (
