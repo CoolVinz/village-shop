@@ -45,17 +45,19 @@ This guide explains how to set up LINE Login integration for the Village Shop ma
 2. Configure the following:
 
 #### Callback URLs
-Add these callback URLs based on your environment:
+**IMPORTANT**: Add BOTH callback URLs to support development and production:
 
-**Development:**
+**Development (Required for localhost testing):**
 ```
 http://localhost:3000/api/auth/callback/line
 ```
 
-**Production:**
+**Production (Current deployment):**
 ```
-https://your-domain.com/api/auth/callback/line
+https://line-shop.aivinz.xyz/api/auth/callback/line
 ```
+
+**Note**: LINE Console allows multiple callback URLs. Register both to enable seamless development and production workflows.
 
 #### Scopes
 Enable the following scopes:
@@ -71,16 +73,32 @@ If you want to access user email addresses:
 
 ## Step 5: Update Environment Variables
 
-Create or update your `.env.local` file with the following:
+### Development Environment (.env.local)
+Create or update your `.env.local` file for localhost development:
 
 ```env
-# NextAuth.js Configuration
-NEXTAUTH_SECRET="your-super-secure-secret-here-at-least-32-characters"
-NEXTAUTH_URL="http://localhost:3000"  # Change to your domain in production
+# NextAuth.js Configuration (Development)
+NEXTAUTH_SECRET="xCf1ogtxdSRpBZXIYxDSpZ+AllgRsyOm1pDnyz3LPqw="
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_DEBUG=true
 
 # LINE Login Configuration
-LINE_CLIENT_ID="your-line-channel-id-from-step-4"
-LINE_CLIENT_SECRET="your-line-channel-secret-from-step-4"
+LINE_CLIENT_ID="2007628106"
+LINE_CLIENT_SECRET="1142c0abf2cca23bbcc281f1c63a5a65"
+```
+
+### Production Environment (.env)
+Your production `.env` file should have:
+
+```env
+# NextAuth.js Configuration (Production)
+NEXTAUTH_SECRET="xCf1ogtxdSRpBZXIYxDSpZ+AllgRsyOm1pDnyz3LPqw="
+NEXTAUTH_URL="https://line-shop.aivinz.xyz"
+NEXTAUTH_DEBUG=false
+
+# LINE Login Configuration (same credentials)
+LINE_CLIENT_ID="2007628106"
+LINE_CLIENT_SECRET="1142c0abf2cca23bbcc281f1c63a5a65"
 ```
 
 ### Generate NEXTAUTH_SECRET
