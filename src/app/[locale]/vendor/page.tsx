@@ -2,6 +2,8 @@ import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/lib/auth-config'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -95,16 +97,34 @@ async function getVendorStats(userId: string) {
   }
 }
 
+interface AuthSession {
+  user: {
+    id: string
+    name?: string | null
+    email?: string | null
+    role: 'CUSTOMER' | 'VENDOR' | 'ADMIN'
+    houseNumber?: string | null
+    profileComplete: boolean
+  }
+}
+
 export default async function VendorDashboard() {
-  // Get authentication token from cookies
-  const cookieStore = await cookies()
-  const token = cookieStore.get('auth-token')?.value
+  // First try NextAuth session (for LINE users)
+  const session = await getServerSession(authOptions) as AuthSession | null
+  let user = null
   
-  if (!token) {
-    redirect('/auth/login')
+  if (session?.user) {
+    user = session.user
+  } else {
+    // Fall back to JWT authentication (for traditional users)
+    const cookieStore = await cookies()
+    const token = cookieStore.get('auth-token')?.value
+    
+    if (token) {
+      user = verifyToken(token)
+    }
   }
   
-  const user = verifyToken(token)
   if (!user) {
     redirect('/auth/login')
   }
