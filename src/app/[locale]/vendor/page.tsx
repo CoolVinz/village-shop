@@ -1,6 +1,4 @@
 import { prisma } from '@/lib/prisma'
-import { verifyToken } from '@/lib/auth'
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth-config'
@@ -109,25 +107,14 @@ interface AuthSession {
 }
 
 export default async function VendorDashboard() {
-  // First try NextAuth session (for LINE users)
+  // Use NextAuth session only
   const session = await getServerSession(authOptions) as AuthSession | null
-  let user = null
   
-  if (session?.user) {
-    user = session.user
-  } else {
-    // Fall back to JWT authentication (for traditional users)
-    const cookieStore = await cookies()
-    const token = cookieStore.get('auth-token')?.value
-    
-    if (token) {
-      user = verifyToken(token)
-    }
-  }
-  
-  if (!user) {
+  if (!session?.user) {
     redirect('/auth/login')
   }
+  
+  const user = session.user
   
   // Check if user is vendor or admin
   if (user.role !== 'VENDOR' && user.role !== 'ADMIN') {

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/hooks/useAuth'
+// Legacy useAuth removed - registration disabled (NextAuth only)
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -23,7 +23,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   
-  const { register } = useAuth()
+  // Legacy register function removed - NextAuth only
   const router = useRouter()
 
   const handleChange = (field: string, value: string) => {
@@ -46,7 +46,8 @@ export default function RegisterPage() {
       return
     }
 
-    const success = await register(formData)
+    // Registration disabled - NextAuth LINE Login only
+    const success = false
     if (success) {
       router.push('/')
     } else {

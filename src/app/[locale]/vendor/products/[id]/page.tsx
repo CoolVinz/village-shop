@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { notFound, redirect } from 'next/navigation'
-import { cookies } from 'next/headers'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/lib/auth-config'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Edit, Package, Store, Calendar } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
-import { verifyToken } from '@/lib/auth'
+// NextAuth session only
 import { formatCurrency } from '@/lib/utils'
 import { findProductBySlugOrId, getVendorShopUrl } from '@/lib/db-helpers'
 
@@ -72,20 +73,26 @@ async function getProduct(productSlugOrId: string, userId: string) {
   return product
 }
 
+interface AuthSession {
+  user: {
+    id: string
+    name?: string | null
+    email?: string | null
+    role: 'CUSTOMER' | 'VENDOR' | 'ADMIN'
+    houseNumber?: string | null
+    profileComplete: boolean
+  }
+}
+
 async function ProductViewContent({ productSlugOrId }: { productSlugOrId: string }) {
-  // Get authentication token from cookies
-  const cookieStore = await cookies()
-  const token = cookieStore.get('auth-token')?.value
-
-  if (!token) {
+  // Use NextAuth session only
+  const session = await getServerSession(authOptions) as AuthSession | null
+  
+  if (!session?.user) {
     redirect('/auth/login?redirect=/vendor/products')
   }
-
-  // Verify the token and get user info
-  const user = verifyToken(token)
-  if (!user) {
-    redirect('/auth/login?redirect=/vendor/products')
-  }
+  
+  const user = session.user
 
   // Check if user has vendor role
   if (user.role !== 'VENDOR' && user.role !== 'ADMIN') {

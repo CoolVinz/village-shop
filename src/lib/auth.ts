@@ -1,9 +1,8 @@
 import { prisma, connectWithRetry } from './prisma'
 import { UserRole } from '@prisma/client'
 import bcrypt from 'bcryptjs'
-import jwt from 'jsonwebtoken'
 
-// Custom session user type
+// Custom session user type (used by NextAuth)
 export interface SessionUser {
   id: string
   name: string
@@ -16,18 +15,6 @@ export interface SessionUser {
   email?: string
   image?: string
   profileComplete: boolean
-}
-
-// JWT payload type
-export interface JWTPayload extends SessionUser {
-  iat: number
-  exp: number
-}
-
-// Environment validation
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secure-jwt-secret-key'
-if (!process.env.JWT_SECRET) {
-  console.warn('⚠️ JWT_SECRET not set, using default (not secure for production)')
 }
 
 // Test database connection during initialization
@@ -54,16 +41,11 @@ export async function verifyPassword(password: string, hashedPassword: string): 
   return await bcrypt.compare(password, hashedPassword)
 }
 
-export function generateToken(user: SessionUser): string {
-  return jwt.sign(user, JWT_SECRET, { expiresIn: '7d' })
-}
-
-export function verifyToken(token: string): JWTPayload | null {
-  try {
-    return jwt.verify(token, JWT_SECRET) as JWTPayload
-  } catch {
-    return null
-  }
+// Keep verifyToken for API route compatibility (some routes still use JWT)
+export function verifyToken(_token: string): SessionUser | null {
+  // Legacy JWT verification disabled - all API routes should use NextAuth
+  // This function returns null to maintain compatibility while forcing NextAuth usage
+  return null
 }
 
 export async function authenticateUser(username: string, password: string): Promise<SessionUser | null> {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useAuth } from '@/hooks/useAuth'
+import { useNextAuth } from '@/hooks/useNextAuth'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Bell, LogOut, Settings, User } from 'lucide-react'
 
 export function VendorHeader() {
-  const { user, logout } = useAuth()
+  const { user, logout } = useNextAuth()
   
   if (!user) return null
   

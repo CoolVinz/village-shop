@@ -1,6 +1,5 @@
 'use client'
 
-import { useAuth } from '@/hooks/useAuth'
 import { useNextAuth } from '@/hooks/useNextAuth'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
@@ -18,13 +17,8 @@ export function AuthGuard({
   requiredRoles = [], 
   redirectTo = '/auth/login' 
 }: AuthGuardProps) {
-  const { user: jwtUser, loading: jwtLoading } = useAuth()
-  const { user: nextAuthUser, loading: nextAuthLoading } = useNextAuth()
+  const { user, loading } = useNextAuth()
   const router = useRouter()
-  
-  // Use NextAuth user if available, otherwise fall back to JWT user
-  const user = nextAuthUser || jwtUser
-  const loading = nextAuthLoading || jwtLoading
 
   useEffect(() => {
     if (loading) return // Still loading

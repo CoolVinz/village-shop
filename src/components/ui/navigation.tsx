@@ -14,18 +14,13 @@ import {
   User,
   Shield
 } from 'lucide-react'
-import { useAuth } from '@/hooks/useAuth'
 import { useNextAuth } from '@/hooks/useNextAuth'
 
 export function Navigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const { user: customUser, logout: customLogout } = useAuth()
-  const { user: nextAuthUser, logout: nextAuthLogout } = useNextAuth()
+  const { user, logout } = useNextAuth()
   const t = useTranslations('navigation')
   const tAuth = useTranslations('auth')
-  
-  // Use NextAuth user if available, otherwise fallback to custom auth user
-  const user = nextAuthUser || customUser
 
   const navigation = [
     { name: t('home'), href: '/' },
@@ -47,14 +42,7 @@ export function Navigation() {
 
   const handleSignOut = async () => {
     try {
-      // Handle both authentication systems
-      if (nextAuthUser) {
-        // User is logged in via NextAuth (LINE Login)
-        await nextAuthLogout()
-      } else if (customUser) {
-        // User is logged in via custom auth (traditional login)
-        await customLogout()
-      }
+      await logout()
     } catch (error) {
       console.error('Logout error:', error)
     }

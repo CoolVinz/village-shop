@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { useCart } from '@/contexts/cart-context'
-import { useAuth } from '@/hooks/useAuth'
+import { useNextAuth } from '@/hooks/useNextAuth'
 import { formatCurrency } from '@/lib/utils'
 import { Store, AlertCircle, User } from 'lucide-react'
 import Image from 'next/image'
@@ -18,7 +18,7 @@ import { toast } from 'sonner'
 
 export default function CheckoutPage() {
   const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading: authLoading } = useNextAuth()
   const { state, clearCart, getCartTotal } = useCart()
   const [isSubmitting, setIsSubmitting] = useState(false)
   

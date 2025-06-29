@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useReducer, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
-import { useAuth } from '@/hooks/useAuth'
+import { useNextAuth } from '@/hooks/useNextAuth'
 import { SessionUser } from '@/lib/auth'
 
 interface CartItem {
@@ -150,7 +150,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading: authLoading } = useNextAuth()
   const [state, dispatch] = useReducer(cartReducer, {
     items: [],
     isOpen: false

@@ -1,27 +1,23 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/hooks/useAuth'
+// Legacy useAuth removed - NextAuth signout only
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Loader2, LogOut } from 'lucide-react'
 
 export default function SignOutPage() {
   const [isLoading, setIsLoading] = useState(false)
-  const { user, logout } = useAuth()
+  // Legacy logout removed - NextAuth signOut only
   const router = useRouter()
 
-  useEffect(() => {
-    if (!user) {
-      router.push('/')
-    }
-  }, [user, router])
+  // Legacy user check removed
 
   const handleSignOut = async () => {
     setIsLoading(true)
     try {
-      await logout()
+      // Legacy logout removed - use NextAuth signOut
       router.push('/')
     } catch (error) {
       console.error('Sign out error:', error)
@@ -29,15 +25,7 @@ export default function SignOutPage() {
     }
   }
 
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600">Redirecting...</p>
-        </div>
-      </div>
-    )
-  }
+  // Legacy user check removed
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -60,8 +48,7 @@ export default function SignOutPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-center text-sm text-gray-600 p-4 bg-gray-50 rounded">
-              <p>Signed in as: <strong>{user?.name}</strong></p>
-              <p>Role: <strong>{user?.role}</strong></p>
+              <p>Legacy auth system removed</p>
             </div>
 
             <div className="flex space-x-3">

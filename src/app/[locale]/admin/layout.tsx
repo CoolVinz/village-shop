@@ -13,14 +13,14 @@ import {
 } from 'lucide-react'
 import { AuthGuard } from '@/components/auth/auth-guard'
 import { UserRole } from '@prisma/client'
-import { useAuth } from '@/hooks/useAuth'
+import { useNextAuth } from '@/hooks/useNextAuth'
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const { user } = useAuth()
+  const { user } = useNextAuth()
 
   const navigation = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },

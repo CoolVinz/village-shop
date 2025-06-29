@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Package, Calendar, Store, Eye, AlertCircle, LogIn } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
-import { useAuth } from '@/hooks/useAuth'
+import { useNextAuth } from '@/hooks/useNextAuth'
 import Image from 'next/image'
 
 interface Order {
@@ -63,7 +63,7 @@ function getStatusColor(status: string) {
 }
 
 export default function OrdersPage() {
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading: authLoading } = useNextAuth()
   const router = useRouter()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(false)
