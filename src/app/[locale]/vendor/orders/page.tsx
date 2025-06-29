@@ -6,6 +6,8 @@ import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/lib/auth-config'
 import OrderItemCard from '@/components/vendor/order-item-card'
 
 async function getVendorOrders(vendorId: string) {
@@ -54,17 +56,34 @@ async function getVendorOrders(vendorId: string) {
 }
 
 
-async function OrdersContent() {
-  // Get authentication token from cookies
-  const cookieStore = await cookies()
-  const token = cookieStore.get('auth-token')?.value
+interface AuthSession {
+  user: {
+    id: string
+    name?: string | null
+    email?: string | null
+    role: 'CUSTOMER' | 'VENDOR' | 'ADMIN'
+    houseNumber?: string | null
+    profileComplete: boolean
+  }
+}
 
-  if (!token) {
-    redirect('/auth/login?redirect=/vendor/orders')
+async function OrdersContent() {
+  // First try NextAuth session (for LINE users)
+  const session = await getServerSession(authOptions) as AuthSession | null
+  let user = null
+  
+  if (session?.user) {
+    user = session.user
+  } else {
+    // Fall back to JWT authentication (for traditional users)
+    const cookieStore = await cookies()
+    const token = cookieStore.get('auth-token')?.value
+    
+    if (token) {
+      user = verifyToken(token)
+    }
   }
 
-  // Verify the token and get user info
-  const user = verifyToken(token)
   if (!user) {
     redirect('/auth/login?redirect=/vendor/orders')
   }
