@@ -42,7 +42,8 @@ export async function verifyPassword(password: string, hashedPassword: string): 
 }
 
 // Keep verifyToken for API route compatibility (some routes still use JWT)
-export function verifyToken(_token: string): SessionUser | null {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function verifyToken(_token?: string): SessionUser | null {
   // Legacy JWT verification disabled - all API routes should use NextAuth
   // This function returns null to maintain compatibility while forcing NextAuth usage
   return null

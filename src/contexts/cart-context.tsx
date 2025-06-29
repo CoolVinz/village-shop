@@ -254,7 +254,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       toggleCart,
       openCart,
       closeCart,
-      currentUser: user,
+      currentUser: user as SessionUser | null,
       isAuthenticated: !!user && !authLoading
     }}>
       {children}

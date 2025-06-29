@@ -1,13 +1,24 @@
 import { Suspense } from 'react'
 import { notFound, redirect } from 'next/navigation'
-import { cookies } from 'next/headers'
+import { getServerSession } from 'next-auth/next'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
-import { verifyToken } from '@/lib/auth'
+import { authOptions } from '@/lib/auth-config'
 import ShopEditForm from '@/components/vendor/shop-edit-form'
+
+interface AuthSession {
+  user: {
+    id: string
+    name?: string | null
+    email?: string | null
+    role: 'CUSTOMER' | 'VENDOR' | 'ADMIN'
+    houseNumber?: string | null
+    profileComplete: boolean
+  }
+}
 
 async function getShop(shopId: string, userId: string) {
   const shop = await prisma.shop.findUnique({
@@ -36,19 +47,14 @@ async function getShop(shopId: string, userId: string) {
 }
 
 async function ShopEditContent({ shopId }: { shopId: string }) {
-  // Get authentication token from cookies
-  const cookieStore = await cookies()
-  const token = cookieStore.get('auth-token')?.value
-
-  if (!token) {
+  // Get NextAuth session
+  const session = await getServerSession(authOptions) as AuthSession | null
+  
+  if (!session?.user) {
     redirect('/auth/login?redirect=/vendor/shop')
   }
 
-  // Verify the token and get user info
-  const user = verifyToken(token)
-  if (!user) {
-    redirect('/auth/login?redirect=/vendor/shop')
-  }
+  const user = session.user
 
   // Check if user has vendor role
   if (user.role !== 'VENDOR' && user.role !== 'ADMIN') {
